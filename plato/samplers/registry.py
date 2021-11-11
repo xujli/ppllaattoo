@@ -41,8 +41,14 @@ else:
 
 def get(datasource, client_id):
     """Get an instance of the sampler."""
-    if hasattr(Config().data, 'sampler') and (client_id >= Config().clients.iid_clients):
-        sampler_type = Config().data.sampler
+    if hasattr(Config().data, 'sampler'):
+        if hasattr(Config().clients, 'iid_clients'):
+            if client_id >= Config().clients.iid_clients:
+                sampler_type = Config().data.sampler
+            else:
+                sampler_type = 'iid'
+        else:
+            sampler_type = Config().data.sampler
     else:
         sampler_type = 'iid'
 
