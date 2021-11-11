@@ -212,6 +212,7 @@ class Config:
         config['clients'] = {}
         config['clients']['type'] = 'simple'
         config['clients']['total_clients'] = 1
+        config['clients']['iid_clients'] = 1
         config['clients']['per_round'] = 1
         config['clients']['do_test'] = False
         config['server'] = {}
