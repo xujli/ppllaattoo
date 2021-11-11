@@ -1,0 +1,9 @@
+python-socketio
+aiohttp
+requests
+matplotlib
+scipy
+wandb
+gym
+transformers
+boto3
