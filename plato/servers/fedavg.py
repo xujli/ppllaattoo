@@ -77,7 +77,7 @@ class Server(base.Server):
 
         # Initialize the csv file which will record results
         if hasattr(Config(), 'results'):
-            result_csv_file = Config().result_dir + 'result.csv'
+            result_csv_file = Config().result_dir + 'result_{}.csv'.format(Config().data.random_seed)
             csv_processor.initialize_csv(result_csv_file, self.recorded_items,
                                          Config().result_dir)
 
@@ -177,7 +177,7 @@ class Server(base.Server):
                 }[item]
                 new_row.append(item_value)
 
-            result_csv_file = Config().result_dir + 'result.csv'
+            result_csv_file = Config().result_dir + 'result_{}.csv'.format(Config().data.random_seed)
 
             csv_processor.write_csv(result_csv_file, new_row)
 
