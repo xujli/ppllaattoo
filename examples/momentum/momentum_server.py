@@ -10,6 +10,7 @@ https://arxiv.org/pdf/1910.06378.pdf
 """
 from plato.config import Config
 from plato.servers import fedavg
+import torch
 
 
 class Server(fedavg.Server):
@@ -38,16 +39,19 @@ class Server(fedavg.Server):
         self.total_samples = sum(
             [report.num_samples for (report, __) in updates])
 
-        # Initialize server update direction
-        if self.momentum_update_direction is None:
-            self.server_update_direction = [0] * len(
-                self.momentum_direction_received[0])
+        self.momentum_update_direction = self.momentum_direction_received[0]
+        for model in range(len(self.momentum_update_direction)):
+            for layer in range(len(self.momentum_update_direction[model])):
+                self.momentum_update_direction[model][layer] *= updates[0][0].num_samples / self.total_samples
 
-        # Update server update direction
-        for update_direction in self.momentum_direction_received:
-            for j, delta in enumerate(update_direction):
-                self.momentum_update_direction[j] += delta / Config(
-                ).clients.total_clients
+        # Update server momentum direction
+        for client in range(1, len(self.momentum_direction_received)):
+            for model in range(len(self.momentum_direction_received[client])):
+                for layer in range(len(self.momentum_direction_received)):
+                    self.momentum_update_direction[model][layer] += \
+                        updates[client][0].num_samples / self.total_samples * \
+                        self.momentum_direction_received[client][model][layer]
+
 
         return update
 
