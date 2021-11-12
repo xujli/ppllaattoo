@@ -12,16 +12,16 @@ import os
 
 os.environ['config_file'] = 'momentum_MNIST_lenet5.yml'
 
-import scaffold_client
-import scaffold_server
-import scaffold_trainer
+import momentum_client
+import momentum_server
+import momentum_trainer
 
 
 def main():
     """ A Plato federated learning training session using the SCAFFOLD algorithm. """
-    trainer = scaffold_trainer.Trainer()
-    client = scaffold_client.Client(trainer=trainer)
-    server = scaffold_server.Server(trainer=trainer)
+    trainer = momentum_trainer.Trainer()
+    client = momentum_client.Client(trainer=trainer)
+    server = momentum_server.Server(trainer=trainer)
 
     server.run(client)
 
