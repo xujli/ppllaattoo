@@ -153,13 +153,14 @@ class Trainer(base.Trainer):
                         optimizer, iterations_per_epoch, train_loader)
                 else:
                     lr_schedule = None
-
+                all_labels = []
                 for epoch in range(1, epochs + 1):
                     for batch_id, (examples,
                                    labels) in enumerate(train_loader):
                         examples, labels = examples.to(self.device), labels.to(
                             self.device)
                         optimizer.zero_grad()
+                        all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
                             outputs = self.model(examples)

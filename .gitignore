@@ -1,0 +1,4 @@
+./examples/momentum_adp/data/
+**/data/
+build/
+**/*.jpg

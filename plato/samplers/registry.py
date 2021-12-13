@@ -1,6 +1,5 @@
 """
 The registry for samplers designed to partition the dataset across the clients.
-
 Having a registry of all available classes is convenient for retrieving an instance based
 on a configuration at run-time.
 """
@@ -39,24 +38,25 @@ else:
     ])
 
 
-def get(datasource, client_id):
+def get(datasource, client_id, testing=False):
     """Get an instance of the sampler."""
-    if hasattr(Config().data, 'sampler'):
-        if hasattr(Config().clients, 'iid_clients'):
-            if client_id >= Config().clients.iid_clients:
-                sampler_type = Config().data.sampler
-            else:
-                sampler_type = 'iid'
-        else:
-            sampler_type = Config().data.sampler
+    if testing:
+        if hasattr(Config().data, 'test_set_sampler'):
+            sampler_type = Config().data.test_set_sampler
+            logging.info("[Client #%d] Test set sampler: %s", client_id,
+                         sampler_type)
     else:
-        sampler_type = 'iid'
+        if hasattr(Config().data, 'sampler'):
+            sampler_type = Config().data.sampler
+        else:
+            sampler_type = 'iid'
 
-    logging.info("[Client #%d] Sampler: %s", client_id, sampler_type)
+        logging.info("[Client #%d] Sampler: %s", client_id, sampler_type)
 
     if sampler_type in registered_samplers:
         registered_sampler = registered_samplers[sampler_type](datasource,
-                                                               client_id)
+                                                               client_id,
+                                                               testing=testing)
     else:
         raise ValueError('No such sampler: {}'.format(sampler_type))
 

@@ -1,0 +1,28 @@
+Metadata-Version: 2.1
+Name: plato-learn
+Version: 0.2.8
+Summary: Packaged version of the Plato framework for federated learning research
+Home-page: https://github.com/TL-System/plato
+Author: 
+License: Apache-2.0
+Description: Plato: a new scalable research framework for federated learning
+        
+Keywords: machine-learning,deep-learning,edge-learning,federated-learning
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Education
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+Provides-Extra: tests

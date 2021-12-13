@@ -1,0 +1,10 @@
+numpy
+python-socketio
+aiohttp
+requests
+boto3
+pyyaml
+datasets
+
+[tests]
+pytest

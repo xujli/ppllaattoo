@@ -111,10 +111,13 @@ class Config:
                 if hasattr(Config().results, 'results_dir'):
                     Config.result_dir = Config.results.results_dir
                 else:
+                    total_clients = Config.clients.total_clients
+                    per_round = Config.clients.per_round
                     datasource = Config.data.datasource
                     model = Config.trainer.model_name
                     server_type = Config.algorithm.type
-                    Config.result_dir = f'./results/{datasource}/{model}/{server_type}/'
+                    iid = Config.data.sampler
+                    Config.result_dir = f'./results/{total_clients}_{per_round}/{datasource}/{model}/{server_type}/{iid}/'
 
             if hasattr(Config().trainer, 'max_concurrency'):
                 # Using a temporary SQLite database to limit the maximum number of concurrent

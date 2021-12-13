@@ -16,7 +16,7 @@ class Model():
     """The ShuffleNet V2 model."""
     @staticmethod
     def is_valid_model_type(model_type):
-        return (model_type.startswith('shufflenet')
+        return (model_type.startswith('shufflenet0.5')
                 and len(model_type.split('_')) == 2
                 and model_type.split('_')[1].isfloat()
                 and float(model_type.split('_')[1]) in [0.5, 1.0, 1.5, 2.0])

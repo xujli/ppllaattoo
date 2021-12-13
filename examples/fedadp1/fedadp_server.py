@@ -8,13 +8,9 @@ in IEEE Transactions on Cognitive Communications and Networking (TCCN'21).
 
 https://ieeexplore.ieee.org/abstract/document/9442814
 """
-
-import math
-
 import numpy as np
-
+from scipy.stats import wasserstein_distance
 from plato.servers import fedavg
-
 
 class Server(fedavg.Server):
     """A federated learning server using the FedAdp algorithm."""
@@ -32,9 +28,12 @@ class Server(fedavg.Server):
         weights_received = [payload for (__, payload) in updates]
 
         num_samples = [report.num_samples for (report, __) in updates]
-
+        # Extract the total number of samples
+        self.total_samples = sum(
+            [report.num_samples for (report, __) in updates])
         # Get adaptive weighting based on both node contribution and date size
-        self.adaptive_weighting = self.calc_adaptive_weighting(weights_received, num_samples)
+        updates_received = self.algorithm.compute_weight_updates(weights_received)
+        self.adaptive_weighting = self.calc_adaptive_weighting(updates_received, num_samples)
 
         return self.algorithm.compute_weight_updates(weights_received)
 
@@ -49,7 +48,7 @@ class Server(fedavg.Server):
             for name, weights in weights_received[0].items()
         }
 
-        # Use adaptive weighted average  
+        # Use adaptive weighted average
         for i, update in enumerate(weights_received):
             for name, delta in update.items():
                 avg_update[name] += delta * self.adaptive_weighting[i]
@@ -60,59 +59,39 @@ class Server(fedavg.Server):
         """ Compute the weights for model aggregation considering both node contribution
         and data size. """
         # Get the node contribution
-        contribs = self.calc_contribution(updates)
+        contribs = self.calc_contribution(updates, num_samples)
+
 
         # Calculate the weighting of each participating client for aggregation
-        adaptive_weighting = [None] * len(updates)
-        total_weight = 0.0
-        for i, contrib in enumerate(contribs):
-            total_weight += num_samples[i] * math.exp(contrib)
-        for i, contrib in enumerate(contribs):
-            adaptive_weighting[i] = (num_samples[i] * math.exp(contrib)) / total_weight
+        adaptive_weighting = np.exp(contribs) / np.sum(np.exp(contribs))
 
         return adaptive_weighting
 
-    def calc_contribution(self, updates):
+    def calc_contribution(self, updates, num_samples):
         """ Calculate the node contribution based on the angle between the local
         and global gradients. """
         correlations, contribs = [None] * len(updates), [None] * len(updates)
 
+        # Perform weighted averaging
+        avg_grad = {
+            name: self.trainer.zeros(weights.shape)
+            for name, weights in updates[0].items()
+        }
+
+        for i, update in enumerate(updates):
+            for name, delta in update.items():
+                # Use weighted average by the number of samples
+                avg_grad[name] += delta * (num_samples[i] / self.total_samples)
+
         # Update the baseline model weights
-        curr_global_grads = self.process_grad(self.algorithm.extract_weights())
-        if self.last_global_grads is None:
-            self.last_global_grads = np.zeros(len(curr_global_grads))
-        global_grads = np.subtract(curr_global_grads, self.last_global_grads)
-        self.last_global_grads = curr_global_grads
+        curr_global_grads = self.process_grad(avg_grad)
 
         # Compute angles in radian between local and global gradients
         for i, update in enumerate(updates):
             local_grads = self.process_grad(update)
-            inner = np.inner(global_grads, local_grads)
-            norms = np.linalg.norm(global_grads) * np.linalg.norm(local_grads)
-            correlations[i] = np.arccos(np.clip(inner / norms, -1.0, 1.0))
+            correlations[i] = - wasserstein_distance(local_grads, curr_global_grads)
 
-        for i, correlation in enumerate(correlations):
-            client_id = self.selected_clients[i]
-
-            # Update the smoothed angle for all clients
-            if client_id not in self.local_correlations.keys():
-                self.local_correlations[client_id] = correlation
-            if self.current_round < 10:
-                self.local_correlations[client_id] = ((self.current_round - 1)
-                / self.current_round) * self.local_correlations[client_id] \
-                                                     + (1 / self.current_round) * correlation
-            else:
-                self.local_correlations[client_id] = ((10 - 1)
-                / 10) * self.local_correlations[client_id] \
-                                                     + (1 / 10) * correlation
-
-
-            # Non-linear mapping to node contribution
-            # contribs[i] = self.alpha * (1 - math.exp(-math.exp(-self.alpha
-            #               * (self.local_correlations[client_id] - 1))))
-            contribs[i] = self.alpha * (1 - 1 / (1 + math.exp(self.local_correlations[client_id])))
-
-        return contribs
+        return correlations
 
     @staticmethod
     def process_grad(grads):
@@ -121,6 +100,6 @@ class Server(fedavg.Server):
 
         flattened = grads[0]
         for i in range(1, len(grads)):
-            flattened = np.append(flattened, grads[i]) 
+            flattened = np.append(flattened, grads[i])
 
         return flattened

@@ -30,27 +30,27 @@ class Server(fedavg.Server):
     async def federated_averaging(self, updates):
         """ Aggregate weight updates from the clients using FedAtt. """
         # Extract weights from the updates
-        weights_received = self.extract_client_updates(updates)
+        updates_received = self.extract_client_updates(updates)
 
         # Extract baseline model weights
         baseline_weights = self.algorithm.extract_weights()
 
         # Update server weights
-        update = self.avg_att(baseline_weights, weights_received)
+        update = self.avg_att(baseline_weights, updates_received)
 
         return update
 
-    def avg_att(self, baseline_weights, weights_received):
+    def avg_att(self, baseline_weights, updates_received):
         """ Perform attentive aggregation with the attention mechanism. """
         att_update = {
             name: self.trainer.zeros(weights.shape)
-            for name, weights in weights_received[0].items()
+            for name, weights in updates_received[0].items()
         }
 
         atts = OrderedDict()
         for name, weight in baseline_weights.items():
-            atts[name] = self.trainer.zeros(len(weights_received))
-            for i, update in enumerate(weights_received):
+            atts[name] = self.trainer.zeros(len(updates_received))
+            for i, update in enumerate(updates_received):
                 delta = update[name]
                 atts[name][i] = torch.linalg.norm(delta)
 
@@ -59,7 +59,7 @@ class Server(fedavg.Server):
 
         for name, weight in baseline_weights.items():
             att_weight = self.trainer.zeros(weight.shape)
-            for i, update in enumerate(weights_received):
+            for i, update in enumerate(updates_received):
                 delta = update[name]
                 att_weight += torch.mul(delta, atts[name][i])
 

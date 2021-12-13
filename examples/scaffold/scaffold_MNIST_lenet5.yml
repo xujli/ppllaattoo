@@ -1,13 +1,15 @@
 clients:
     # The total number of clients
-    total_clients: 1
+    total_clients: 10
 
     # The number of clients selected in each round
-    per_round: 1
+    per_round: 4
 
     # Should the clients compute test accuracy locally?
-    do_test: true
+    do_test: false
 
+    # Whether simulate clients or not
+    simulation: false
 server:
     address: 127.0.0.1
     port: 8000
@@ -20,29 +22,26 @@ data:
     data_path: ./data
 
     # Number of samples in each partition
-    partition_size: 20000
+    partition_size: 160
 
     # IID or non-IID?
-    sampler: iid
+    sampler: noniid
 
 trainer:
     # The maximum number of training rounds
-    rounds: 100
+    rounds: 30
 
     # Whether the training should use multiple GPUs if available
     parallelized: false
-
-    # The maximum number of clients running concurrently
-    max_concurrency: 3
 
     # The target accuracy
     target_accuracy: 0.98
 
     # Number of epoches for local training in each communication round
     epochs: 1
-    batch_size: 32
+    batch_size: 16
     optimizer: Scaffold
-    learning_rate: 0.01
+    learning_rate: 0.001
     momentum: 0.9
     weight_decay: 0.0
 
