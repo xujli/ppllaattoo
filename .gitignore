@@ -2,4 +2,7 @@
 **/data/
 build/
 dist/
+plato_learn.egg-info/
+.idea/
 **/*.jpg
+**/*.png
