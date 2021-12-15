@@ -57,6 +57,7 @@ class Trainer(basic.Trainer):
         sampler: the sampler that extracts a partition for this client.
         cut_layer (optional): The layer which training should start from.
         """
+        print(config['datasource'])
         if 'use_wandb' in config:
             import wandb
 

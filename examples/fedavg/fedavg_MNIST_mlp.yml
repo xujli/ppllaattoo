@@ -5,7 +5,7 @@ clients:
   do_test: false
   per_round: 4
   simulation: false
-  total_clients: 50
+  total_clients: 40
   type: simple
 data:
   data_path: ../momentum_adp/data

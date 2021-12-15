@@ -8,6 +8,10 @@ import os
 import random
 import time
 
+
+from torchtext.vocab import build_vocab_from_iterator
+from torchtext.data.functional import to_map_style_dataset
+from torchtext.data.utils import get_tokenizer
 from plato.algorithms import registry as algorithms_registry
 from plato.config import Config
 from plato.datasources import registry as datasources_registry
@@ -74,6 +78,21 @@ class Server(base.Server):
         if not Config().clients.do_test:
             dataset = datasources_registry.get(client_id=0)
             self.testset = dataset.get_test_set()
+            self.testset = to_map_style_dataset(self.testset)
+            if Config().data.datasource == 'IMDB':
+                tokenizer = get_tokenizer('basic_english')
+
+                def yield_tokens(data_iter):
+                    for _, text in data_iter:
+                        yield tokenizer(text)
+                trainset = dataset.get_train_set()
+                vocab = build_vocab_from_iterator(yield_tokens(trainset), specials=["<unk>"])
+                vocab.set_default_index(vocab["<unk>"])
+                text_pipeline = lambda x: vocab(tokenizer(x))
+                label_pipeline = lambda x: 0 if x == 'neg' else 1
+
+                self.trainer.text_pipeline = text_pipeline
+                self.trainer.label_pipeline = label_pipeline
 
         # Initialize the csv file which will record results
         if hasattr(Config(), 'results'):

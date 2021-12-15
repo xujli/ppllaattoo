@@ -15,6 +15,7 @@ plato/clients/edge.py
 plato/clients/mistnet.py
 plato/clients/registry.py
 plato/clients/simple.py
+plato/datasources/IMDB.py
 plato/datasources/__init__.py
 plato/datasources/base.py
 plato/datasources/cifar10.py
@@ -36,6 +37,7 @@ plato/datasources/datalib/parallel_downloader.py
 plato/datasources/datalib/referitgame_utils.py
 plato/datasources/datalib/video_transform.py
 plato/models/MLP.py
+plato/models/RNN.py
 plato/models/__init__.py
 plato/models/alexnet.py
 plato/models/googlenet.py

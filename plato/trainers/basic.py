@@ -10,6 +10,8 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
+
+from torchtext.legacy import data
 from plato.config import Config
 from plato.models import registry as models_registry
 from plato.trainers import base
@@ -37,6 +39,18 @@ class Trainer(base.Trainer):
             self.model = nn.DataParallel(model)
         else:
             self.model = model
+
+    def collate_batch(self, batch):
+        label_list, text_list, offsets = [], [], [0]
+        for (_label, _text) in batch:
+            label_list.append(self.label_pipeline(_label))
+            processed_text = torch.tensor(self.text_pipeline(_text), dtype=torch.int64)
+            text_list.append(processed_text)
+            offsets.append(processed_text.size(0))
+        label_list = torch.tensor(label_list, dtype=torch.int64)
+        offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
+        text_list = torch.cat(text_list)
+        return text_list.to(self.device), label_list.to(self.device), offsets.to(self.device)
 
     def zeros(self, shape):
         """Returns a PyTorch zero tensor with the given shape."""
@@ -121,12 +135,24 @@ class Trainer(base.Trainer):
                     train_loader = self.train_loader(batch_size, trainset,
                                                      sampler.get(), cut_layer)
                 else:
-                    train_loader = torch.utils.data.DataLoader(
-                        dataset=trainset,
-                        shuffle=False,
-                        batch_size=batch_size,
-                        sampler=sampler.get())
+                    if config['datasource'] == 'IMDB':
+                        train_loader = torch.utils.data.DataLoader(
+                            dataset=trainset,
+                            shuffle=False,
+                            batch_size=batch_size,
+                            sampler=sampler.get(),
+                            collate_fn=self.collate_batch,
+                        )
+                    else:
+                        train_loader = torch.utils.data.DataLoader(
+                            dataset=trainset,
+                            shuffle=False,
+                            batch_size=batch_size,
+                            sampler=sampler.get()
+                        )
 
+                logging.info("[Client #%d] Loading the dataloader.",
+                             self.client_id)
                 iterations_per_epoch = np.ceil(len(trainset) /
                                                batch_size).astype(int)
                 epochs = config['epochs']
@@ -155,15 +181,22 @@ class Trainer(base.Trainer):
                     lr_schedule = None
                 all_labels = []
                 for epoch in range(1, epochs + 1):
-                    for batch_id, (examples,
-                                   labels) in enumerate(train_loader):
-                        examples, labels = examples.to(self.device), labels.to(
-                            self.device)
+                    for batch_id, item in enumerate(train_loader):
+                        if config['datasource'] == 'IMDB':
+                            examples, labels, offsets = item
+                            examples, labels, offsets = examples.to(self.device), labels.to(
+                                self.device), offsets.to(self.device)
+                        else:
+                            examples, labels = item
+                            examples, labels = examples.to(self.device), labels.to(
+                                self.device)
+
                         optimizer.zero_grad()
                         all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
-                            outputs = self.model(examples)
+                            outputs = self.model(examples) if config['datasource'] != 'IMDB' else\
+                                self.model(examples, offsets)
                         else:
                             outputs = self.model.forward_from(
                                 examples, cut_layer)
@@ -198,6 +231,7 @@ class Trainer(base.Trainer):
                         optimizer.params_state_update()
 
         except Exception as training_exception:
+            logging.info(training_exception)
             logging.info("Training on client #%d failed.", self.client_id)
             raise training_exception
 
@@ -223,6 +257,8 @@ class Trainer(base.Trainer):
         """
         config = Config().trainer._asdict()
         config['run_id'] = Config().params['run_id']
+        config['datasource'] = Config().data.datasource
+
 
         if hasattr(Config().trainer, 'max_concurrency'):
             self.start_training()
@@ -279,21 +315,36 @@ class Trainer(base.Trainer):
         try:
             custom_test = getattr(self, "test_model", None)
 
+
             if callable(custom_test):
                 accuracy = self.test_model(config, testset)
             else:
-                test_loader = torch.utils.data.DataLoader(
-                    testset, batch_size=config['batch_size'], shuffle=False)
+                if config['datasource'] == 'IMDB':
+                    test_loader = torch.utils.data.DataLoader(
+                        dataset=testset,
+                        shuffle=False,
+                        batch_size=config['batch_size'],
+                        collate_fn=self.collate_batch,
+                    )
+                else:
+                    test_loader = torch.utils.data.DataLoader(
+                        testset, batch_size=config['batch_size'], shuffle=False)
 
                 correct = 0
                 total = 0
 
                 with torch.no_grad():
-                    for examples, labels in test_loader:
-                        examples, labels = examples.to(self.device), labels.to(
-                            self.device)
-
-                        outputs = self.model(examples)
+                    for item in test_loader:
+                        if config['datasource'] == 'IMDB':
+                            examples, labels, offsets = item
+                            examples, labels, offsets = examples.to(self.device), labels.to(
+                                self.device), offsets.to(self.device)
+                            outputs = self.model(examples, offsets)
+                        else:
+                            examples, labels = item
+                            examples, labels = examples.to(self.device), labels.to(
+                                self.device)
+                            outputs = self.model(examples)
 
                         _, predicted = torch.max(outputs.data, 1)
                         total += labels.size(0)
@@ -321,6 +372,7 @@ class Trainer(base.Trainer):
         """
         config = Config().trainer._asdict()
         config['run_id'] = Config().params['run_id']
+        config['datasource'] = Config().data.datasource
 
         if hasattr(Config().trainer, 'max_concurrency'):
             self.start_training()
@@ -358,6 +410,7 @@ class Trainer(base.Trainer):
         """
         config = Config().trainer._asdict()
         config['run_id'] = Config().params['run_id']
+        config['datasource'] = Config().data.datasource
 
         self.model.to(self.device)
         self.model.eval()
@@ -367,18 +420,32 @@ class Trainer(base.Trainer):
         if callable(custom_test):
             return self.test_model(config, testset)
 
-        test_loader = torch.utils.data.DataLoader(
-            testset, batch_size=config['batch_size'], shuffle=False)
+        if config['datasource'] == 'IMDB':
+            test_loader = torch.utils.data.DataLoader(
+                dataset=testset,
+                shuffle=False,
+                batch_size=config['batch_size'],
+                collate_fn=self.collate_batch,
+            )
+        else:
+            test_loader = torch.utils.data.DataLoader(
+                testset, batch_size=config['batch_size'], shuffle=False)
 
         correct = 0
         total = 0
 
         with torch.no_grad():
-            for examples, labels in test_loader:
-                examples, labels = examples.to(self.device), labels.to(
-                    self.device)
-
-                outputs = self.model(examples)
+            for item in test_loader:
+                if config['datasource'] == 'IMDB':
+                    examples, labels, offsets = item
+                    examples, labels, offsets = examples.to(self.device), labels.to(
+                        self.device), offsets.to(self.device)
+                    outputs = self.model(examples, offsets)
+                else:
+                    examples, labels = item
+                    examples, labels = examples.to(self.device), labels.to(
+                        self.device)
+                    outputs = self.model(examples)
 
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)

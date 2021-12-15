@@ -34,6 +34,7 @@ else:
         pascal_voc,
         tiny_imagenet,
         femnist,
+        IMDB,
     )
 
     registered_datasources = OrderedDict([
@@ -44,6 +45,7 @@ else:
         ('HuggingFace', huggingface),
         ('PASCAL_VOC', pascal_voc),
         ('TinyImageNet', tiny_imagenet),
+        ('IMDB', IMDB),
     ])
 
     registered_partitioned_datasources = OrderedDict([('FEMNIST', femnist)])
