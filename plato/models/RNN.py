@@ -7,7 +7,7 @@ class Model(nn.Module):
     def __init__(self, input_dim=100683, embedding_dim=100, num_classes=2):
         super().__init__()
 
-        self.embedding = nn.EmbeddingBag(input_dim, embedding_dim, sparse=True)
+        self.embedding = nn.EmbeddingBag(input_dim, embedding_dim, sparse=False)
 
         self.fc = nn.Linear(embedding_dim, num_classes)
 

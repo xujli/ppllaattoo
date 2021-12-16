@@ -7,7 +7,7 @@ Using Stochastic Recursive Gradient." (https://arxiv.org/pdf/1703.00102.pdf)
 """
 import os
 
-os.environ['config_file'] = 'fedsarah_MNIST_lenet5.yml'
+os.environ['config_file'] = 'fedsarah_IMDB_RNN.yml'
 
 import fedsarah_client
 import fedsarah_server

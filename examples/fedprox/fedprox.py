@@ -10,7 +10,7 @@ https://arxiv.org/abs/1812.07108
 """
 import os
 
-os.environ['config_file'] = './fedprox_MNIST_lenet5.yml'
+os.environ['config_file'] = './fedprox_MNIST_mlp.yml'
 
 from plato.servers import fedavg
 

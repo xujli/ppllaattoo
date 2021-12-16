@@ -82,11 +82,21 @@ class Trainer(basic.Trainer):
                     train_loader = self.train_loader(batch_size, trainset,
                                                      sampler.get(), cut_layer)
                 else:
-                    train_loader = torch.utils.data.DataLoader(
-                        dataset=trainset,
-                        shuffle=False,
-                        batch_size=batch_size,
-                        sampler=sampler.get())
+                    if config['datasource'] == 'IMDB':
+                        train_loader = torch.utils.data.DataLoader(
+                            dataset=trainset,
+                            shuffle=False,
+                            batch_size=batch_size,
+                            sampler=sampler.get(),
+                            collate_fn=self.collate_batch,
+                        )
+                    else:
+                        train_loader = torch.utils.data.DataLoader(
+                            dataset=trainset,
+                            shuffle=False,
+                            batch_size=batch_size,
+                            sampler=sampler.get()
+                        )
 
                 iterations_per_epoch = np.ceil(len(trainset) /
                                                batch_size).astype(int)
@@ -122,15 +132,22 @@ class Trainer(basic.Trainer):
                     lr_schedule = None
                 all_labels = []
                 for epoch in range(1, epochs + 1):
-                    for batch_id, (examples,
-                                   labels) in enumerate(train_loader):
-                        examples, labels = examples.to(self.device), labels.to(
-                            self.device)
+                    for batch_id, item in enumerate(train_loader):
+                        if config['datasource'] == 'IMDB':
+                            examples, labels, offsets = item
+                            examples, labels, offsets = examples.to(self.device), labels.to(
+                                self.device), offsets.to(self.device)
+                        else:
+                            examples, labels = item
+                            examples, labels = examples.to(self.device), labels.to(
+                                self.device)
+
                         optimizer.zero_grad()
                         all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
-                            outputs = self.model(examples)
+                            outputs = self.model(examples) if config['datasource'] != 'IMDB' else \
+                                self.model(examples, offsets)
                         else:
                             outputs = self.model.forward_from(
                                 examples, cut_layer)

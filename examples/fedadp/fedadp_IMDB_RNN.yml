@@ -1,36 +1,35 @@
 algorithm:
-  total_silos: 5
+  total_silos: 2
   type: fedavg
 clients:
   do_test: false
-  per_round: 4
+  per_round: 2
   simulation: false
   total_clients: 10
   type: simple
 data:
   data_path: ../momentum_adp/data
-  datasource: MNIST
-  institution_class_ids: 0,1;2,3;4,5;6,7;8,9
+  datasource: IMDB
+  institution_class_ids: 0;1
   label_distribution: iid
   partition_size: 600
-  random_seed: 3
-  sampler: orthogonal
+  random_seed: 0
+  sampler: iid
 results:
   plot: round&accuracy, round&training_time
   types: accuracy, training_time, round_time
 server:
   address: 127.0.0.1
-  port: 8019
+  port: 8018
 trainer:
   batch_size: 50
   epochs: 1
-  learning_rate: 0.01
-  model_name: mlp
-  momentum: 0.9
-  mu: 0.1
-  optimizer: FedProx
+  learning_rate: 1
+  model_name: rnn
+  momentum: 0
+  optimizer: SGD
   parallelized: false
-  rounds: 80
+  rounds: 50
   target_accuracy: 0.98
   type: basic
   weight_decay: 0.0

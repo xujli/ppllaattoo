@@ -11,7 +11,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from torchtext.legacy import data
+from torchtext.vocab import build_vocab_from_iterator
+from torchtext.data.utils import get_tokenizer
 from plato.config import Config
 from plato.models import registry as models_registry
 from plato.trainers import base
@@ -39,6 +40,23 @@ class Trainer(base.Trainer):
             self.model = nn.DataParallel(model)
         else:
             self.model = model
+
+    def text_pipeline(self, x):
+        return self.vocab(self.tokenizer(x))
+
+    def label_pipeline(self, y):
+        return 0 if y == 'neg' else 1
+
+    def configure_IMDB(self, dataset):
+        self.tokenizer = get_tokenizer('basic_english')
+
+        def yield_tokens(data_iter):
+            for _, text in data_iter:
+                yield self.tokenizer(text)
+
+        self.vocab = build_vocab_from_iterator(yield_tokens(dataset), specials=["<unk>"])
+        self.vocab.set_default_index(self.vocab["<unk>"])
+
 
     def collate_batch(self, batch):
         label_list, text_list, offsets = [], [], [0]

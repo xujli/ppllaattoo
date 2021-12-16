@@ -78,21 +78,12 @@ class Server(base.Server):
         if not Config().clients.do_test:
             dataset = datasources_registry.get(client_id=0)
             self.testset = dataset.get_test_set()
-            self.testset = to_map_style_dataset(self.testset)
+
             if Config().data.datasource == 'IMDB':
-                tokenizer = get_tokenizer('basic_english')
+                self.testset = to_map_style_dataset(self.testset)
 
-                def yield_tokens(data_iter):
-                    for _, text in data_iter:
-                        yield tokenizer(text)
                 trainset = dataset.get_train_set()
-                vocab = build_vocab_from_iterator(yield_tokens(trainset), specials=["<unk>"])
-                vocab.set_default_index(vocab["<unk>"])
-                text_pipeline = lambda x: vocab(tokenizer(x))
-                label_pipeline = lambda x: 0 if x == 'neg' else 1
-
-                self.trainer.text_pipeline = text_pipeline
-                self.trainer.label_pipeline = label_pipeline
+                self.trainer.configure_IMDB(trainset)
 
         # Initialize the csv file which will record results
         if hasattr(Config(), 'results'):

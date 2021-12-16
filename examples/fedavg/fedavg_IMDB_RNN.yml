@@ -3,7 +3,7 @@ algorithm:
   type: fedavg
 clients:
   do_test: false
-  per_round: 2
+  per_round: 4
   simulation: false
   total_clients: 10
   type: simple
@@ -13,8 +13,8 @@ data:
   institution_class_ids: 0;1
   label_distribution: iid
   partition_size: 600
-  random_seed: 0
-  sampler: iid
+  random_seed: 4
+  sampler: orthogonal
 results:
   plot: round&accuracy, round&training_time
   types: accuracy, training_time, round_time
@@ -24,7 +24,7 @@ server:
 trainer:
   batch_size: 50
   epochs: 1
-  learning_rate: 0.01
+  learning_rate: 1
   model_name: rnn
   momentum: 0
   optimizer: SGD

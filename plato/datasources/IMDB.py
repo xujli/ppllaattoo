@@ -82,14 +82,21 @@ class DataSource(base.DataSource):
         self.trainset = IMDB(root=_path, split='train')
         self.testset = IMDB(root=_path, split='test')
 
-
     def num_train_examples(self):
         return 25000
 
     def num_test_examples(self):
         return 25000
 
+    def targets(self):
+        _path = os.path.join(Config().data.data_path, 'IMDB')
+        trainset = to_map_style_dataset(IMDB(root=_path, split='train'))
+        target_dict = {'neg': 0, 'pos': 1}
+        targets = [target_dict[item[0]] for item in trainset]
+        return targets
 
+    def classes(self):
+        return ['0 - neg', '1 - pos']
 
 class BatchWrapper:
     def __init__(self, dl):
@@ -102,7 +109,6 @@ class BatchWrapper:
 from torch import nn
 
 class TextClassificationModel(nn.Module):
-
     def __init__(self, vocab_size, embed_dim, num_class):
         super(TextClassificationModel, self).__init__()
         self.embedding = nn.EmbeddingBag(vocab_size, embed_dim, sparse=True)
@@ -120,47 +126,48 @@ class TextClassificationModel(nn.Module):
         return self.fc(embedded)
 
 if __name__ == '__main__':
-
-    tokenizer = get_tokenizer('basic_english')
-    train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
-
-
-    def yield_tokens(data_iter):
-        for _, text in data_iter:
-            yield tokenizer(text)
-
-    # train_iter = to_map_style_dataset(train_iter)
-    vocab = build_vocab_from_iterator(yield_tokens(train_iter), specials=["<unk>"])
-    vocab.set_default_index(vocab["<unk>"])
-    text_pipeline = lambda x: vocab(tokenizer(x))
-    label_pipeline = lambda x: 0 if x == 'neg' else 1
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    def collate_batch(batch):
-        label_list, text_list, offsets = [], [], [0]
-        for (_label, _text) in batch:
-            label_list.append(label_pipeline(_label))
-            processed_text = torch.tensor(text_pipeline(_text), dtype=torch.int64)
-            text_list.append(processed_text)
-            offsets.append(processed_text.size(0))
-        label_list = torch.tensor(label_list, dtype=torch.int64)
-        offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
-        text_list = torch.cat(text_list)
-        print(text_list.shape)
-        return label_list.to(device), text_list.to(device), offsets.to(device)
-
-    train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
-    vocab_size = len(vocab)
-    print(vocab_size)
-    emsize = 64
-    model = TextClassificationModel(vocab_size, emsize, 2).to(device)
-    dataloader = DataLoader(train_iter, batch_size=8, shuffle=False, collate_fn=collate_batch)
-
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
-    for idx, (label, text, offsets) in enumerate(dataloader):
-        optimizer.zero_grad()
-        predicted_label = model(text, offsets)
-        loss = criterion(predicted_label, label)
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-        optimizer.step()
+    dataset = DataSource()
+    print(dataset.targets())
+    # tokenizer = get_tokenizer('basic_english')
+    # train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
+    #
+    #
+    # def yield_tokens(data_iter):
+    #     for _, text in data_iter:
+    #         yield tokenizer(text)
+    #
+    # # train_iter = to_map_style_dataset(train_iter)
+    # vocab = build_vocab_from_iterator(yield_tokens(train_iter), specials=["<unk>"])
+    # vocab.set_default_index(vocab["<unk>"])
+    # text_pipeline = lambda x: vocab(tokenizer(x))
+    # label_pipeline = lambda x: 0 if x == 'neg' else 1
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # def collate_batch(batch):
+    #     label_list, text_list, offsets = [], [], [0]
+    #     for (_label, _text) in batch:
+    #         label_list.append(label_pipeline(_label))
+    #         processed_text = torch.tensor(text_pipeline(_text), dtype=torch.int64)
+    #         text_list.append(processed_text)
+    #         offsets.append(processed_text.size(0))
+    #     label_list = torch.tensor(label_list, dtype=torch.int64)
+    #     offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
+    #     text_list = torch.cat(text_list)
+    #     print(text_list.shape)
+    #     return label_list.to(device), text_list.to(device), offsets.to(device)
+    #
+    # train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
+    # vocab_size = len(vocab)
+    # print(vocab_size)
+    # emsize = 64
+    # model = TextClassificationModel(vocab_size, emsize, 2).to(device)
+    # dataloader = DataLoader(train_iter, batch_size=8, shuffle=False, collate_fn=collate_batch)
+    #
+    # criterion = torch.nn.CrossEntropyLoss()
+    # optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
+    # for idx, (label, text, offsets) in enumerate(dataloader):
+    #     optimizer.zero_grad()
+    #     predicted_label = model(text, offsets)
+    #     loss = criterion(predicted_label, label)
+    #     loss.backward()
+    #     torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
+    #     optimizer.step()

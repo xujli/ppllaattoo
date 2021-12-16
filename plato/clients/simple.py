@@ -6,11 +6,10 @@ import logging
 import time
 from dataclasses import dataclass
 
-from torchtext.vocab import build_vocab_from_iterator
 from torchtext.data.functional import to_map_style_dataset
-from torchtext.data.utils import get_tokenizer
-from plato.algorithms import registry as algorithms_registry
+
 from plato.config import Config
+from plato.algorithms import registry as algorithms_registry
 from plato.datasources import registry as datasources_registry
 from plato.samplers import registry as samplers_registry
 from plato.trainers import registry as trainers_registry
@@ -90,20 +89,8 @@ class Client(base.Client):
         self.data_loading_time = time.perf_counter() - data_loading_start_time
 
         if Config().data.datasource == 'IMDB':
-            tokenizer = get_tokenizer('basic_english')
-
-            def yield_tokens(data_iter):
-                for _, text in data_iter:
-                    yield tokenizer(text)
-
             self.trainset = to_map_style_dataset(self.trainset)
-            vocab = build_vocab_from_iterator(yield_tokens(self.trainset), specials=["<unk>"])
-            vocab.set_default_index(vocab["<unk>"])
-            text_pipeline = lambda x: vocab(tokenizer(x))
-            label_pipeline = lambda x: 0 if x == 'neg' else 1
-
-            self.trainer.text_pipeline = text_pipeline
-            self.trainer.label_pipeline = label_pipeline
+            self.trainer.configure_IMDB(self.trainset)
 
     def load_payload(self, server_payload) -> None:
         """Loading the server model onto this client."""

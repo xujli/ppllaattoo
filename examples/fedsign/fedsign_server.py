@@ -8,8 +8,9 @@ in Proceedings of the 37th International Conference on Machine Learning (ICML), 
 
 https://arxiv.org/pdf/1910.06378.pdf
 """
-from plato.config import Config
+
 from plato.servers import fedavg
+
 
 class Server(fedavg.Server):
     """A federated learning server using the SCAFFOLD algorithm."""
@@ -33,4 +34,5 @@ class Server(fedavg.Server):
     def customize_server_payload(self, payload):
         "Add server control variates into the server payload."
         return [payload, self.interval_dict]
+
 

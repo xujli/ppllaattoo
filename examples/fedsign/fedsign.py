@@ -10,7 +10,7 @@ https://arxiv.org/pdf/1910.06378.pdf
 """
 import os
 
-os.environ['config_file'] = 'fedsign_MNIST_lenet5.yml'
+os.environ['config_file'] = 'fedsign_IMDB_RNN.yml'
 
 import fedsign_client
 import fedsign_trainer

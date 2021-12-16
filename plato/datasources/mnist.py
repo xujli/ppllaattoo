@@ -31,3 +31,8 @@ class DataSource(base.DataSource):
 
     def num_test_examples(self):
         return 10000
+
+if __name__ == '__main__':
+    data = DataSource()
+    print(data.targets())
+    print(data.classes())

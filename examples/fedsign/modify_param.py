@@ -1,7 +1,7 @@
 import yaml
 import os
 
-yml_name = 'fedsign_MNIST_lenet5.yml'
+yml_name = 'fedsign_IMDB_RNN.yml'
 
 def modify_random_seed(seed):
     with open(yml_name, encoding='UTF-8') as fp:
