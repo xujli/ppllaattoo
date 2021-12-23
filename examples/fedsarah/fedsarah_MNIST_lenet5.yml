@@ -6,7 +6,8 @@ clients:
     per_round: 1
 
     # Should the clients compute test accuracy locally?
-    do_test: true
+    do_test: false
+    simulation: false
 
 server:
     address: 127.0.0.1
@@ -17,10 +18,11 @@ data:
     datasource: MNIST
 
     # Where the dataset is located
-    data_path: ./data
+
+    data_path: ../momentum_adp/data
 
     # Number of samples in each partition
-    partition_size: 20000
+    partition_size: 200
 
     # IID or non-IID?
     sampler: iid
@@ -31,9 +33,6 @@ trainer:
 
     # Whether the training should use multiple GPUs if available
     parallelized: false
-
-    # The maximum number of clients running concurrently
-    max_concurrency: 3
 
     # The target accuracy
     target_accuracy: 0.98

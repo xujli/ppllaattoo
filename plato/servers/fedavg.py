@@ -8,10 +8,7 @@ import os
 import random
 import time
 
-
-from torchtext.vocab import build_vocab_from_iterator
 from torchtext.data.functional import to_map_style_dataset
-from torchtext.data.utils import get_tokenizer
 from plato.algorithms import registry as algorithms_registry
 from plato.config import Config
 from plato.datasources import registry as datasources_registry

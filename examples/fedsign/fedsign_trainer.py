@@ -30,20 +30,8 @@ class Trainer(basic.Trainer):
         client_id: The ID of the client using this trainer (optional).
         """
         super().__init__(model)
-        self.interval = 1
-        self.server_update_direction = None
-
-    def get_optimizer(self, model):
-        """Initialize the SCAFFOLD optimizer."""
-        optimizer = fedsign_optimizer.ScaffoldOptimizer(
-            model.parameters(),
-            lr=Config().trainer.learning_rate,
-            momentum=Config().trainer.momentum,
-            weight_decay=Config().trainer.weight_decay)
-
-        optimizer.server_update_direction = self.server_update_direction
-        # print(len(self.server_update_direction), len(model.parameters()))
-        return optimizer
+        self.server_update_direction = []
+        self.abs_value = []
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -57,7 +45,6 @@ class Trainer(basic.Trainer):
         sampler: the sampler that extracts a partition for this client.
         cut_layer (optional): The layer which training should start from.
         """
-        print(config['datasource'])
         if 'use_wandb' in config:
             import wandb
 
@@ -117,19 +104,14 @@ class Trainer(basic.Trainer):
                 get_optimizer = getattr(self, "get_optimizer",
                                         optimizers.get_optimizer)
                 optimizer = get_optimizer(self.model)
-                optimizer.batches_num = len(train_loader)
-                optimizer.interval = self.interval
-                if hasattr(config, 'alpha'):
-                    optimizer.alpha = config['alpha']
 
-                logging.info("[Client #%d] Loading the Batch nums %d.",
-                             self.client_id, optimizer.batches_num)
                 # Initializing the learning rate schedule, if necessary
                 if hasattr(config, 'lr_schedule'):
                     lr_schedule = optimizers.get_lr_schedule(
                         optimizer, iterations_per_epoch, train_loader)
                 else:
                     lr_schedule = None
+                self.abs_value = []
                 all_labels = []
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
@@ -157,6 +139,10 @@ class Trainer(basic.Trainer):
                         loss.backward()
 
                         optimizer.step()
+                        if not self.server_update_direction is None:
+                            for group in optimizer.param_groups:
+                                for p, update in zip(group['params'], self.server_update_direction.values()):
+                                    optimizer.state[p]['momentum_buffer'] = update
 
                         if lr_schedule is not None:
                             lr_schedule.step()
@@ -178,10 +164,20 @@ class Trainer(basic.Trainer):
                                             batch_id, len(train_loader),
                                             loss.data.item()))
 
+                        self.abs = []
+                        for group in optimizer.param_groups:
+                            for p in group['params']:
+                                self.abs.extend(optimizer.state[p]['momentum_buffer'].flatten())
+
+                        self.abs_value.append(torch.mean(torch.abs(torch.tensor(self.abs))).cpu().detach().numpy())
+
                     if hasattr(optimizer, "params_state_update"):
                         optimizer.params_state_update()
 
+
+
         except Exception as training_exception:
+            logging.info(training_exception)
             logging.info("Training on client #%d failed.", self.client_id)
             raise training_exception
 

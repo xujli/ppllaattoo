@@ -6,6 +6,7 @@ clients:
   per_round: 4
   simulation: false
   total_clients: 10
+  type: simple
 data:
   data_path: ../momentum_adp/data
   datasource: FashionMNIST
@@ -13,7 +14,7 @@ data:
   label_distribution: iid
   partition_size: 1000
   random_seed: 9
-  sampler: orthogonal_fedavg
+  sampler: orthogonal
 results:
   plot: round&accuracy, round&training_time
   types: accuracy, training_time, round_time
@@ -26,9 +27,10 @@ trainer:
   learning_rate: 0.01
   model_name: lenet
   momentum: 0
-  optimizer: FedProx
   mu: 0.1
+  optimizer: FedProx
   parallelized: false
-  rounds: 50
+  rounds: 80
   target_accuracy: 0.98
+  type: basic
   weight_decay: 0.0

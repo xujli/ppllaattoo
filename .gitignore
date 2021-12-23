@@ -2,6 +2,8 @@
 **/data/
 build/
 dist/
+vis/
+results/
 plato_learn.egg-info/
 .idea/
 **/*.jpg

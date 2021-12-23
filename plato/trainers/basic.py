@@ -41,6 +41,8 @@ class Trainer(base.Trainer):
         else:
             self.model = model
 
+        self.tokenizer = None
+
     def text_pipeline(self, x):
         return self.vocab(self.tokenizer(x))
 
@@ -48,14 +50,15 @@ class Trainer(base.Trainer):
         return 0 if y == 'neg' else 1
 
     def configure_IMDB(self, dataset):
-        self.tokenizer = get_tokenizer('basic_english')
+        if self.tokenizer is None:
+            self.tokenizer = get_tokenizer('basic_english')
 
-        def yield_tokens(data_iter):
-            for _, text in data_iter:
-                yield self.tokenizer(text)
+            def yield_tokens(data_iter):
+                for _, text in data_iter:
+                    yield self.tokenizer(text)
 
-        self.vocab = build_vocab_from_iterator(yield_tokens(dataset), specials=["<unk>"])
-        self.vocab.set_default_index(self.vocab["<unk>"])
+            self.vocab = build_vocab_from_iterator(yield_tokens(dataset), specials=["<unk>"])
+            self.vocab.set_default_index(self.vocab["<unk>"])
 
 
     def collate_batch(self, batch):

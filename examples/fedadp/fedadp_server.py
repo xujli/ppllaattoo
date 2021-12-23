@@ -98,21 +98,7 @@ class Server(fedavg.Server):
             norms = np.linalg.norm(curr_global_grads) * np.linalg.norm(local_grads)
             correlations[i] = np.arccos(np.clip(inner / norms, -1.0, 1.0))
 
-        for i, correlation in enumerate(correlations):
-            client_id = self.selected_clients[i]
-
-            # Update the smoothed angle for all clients
-            if client_id not in self.local_correlations.keys():
-                self.local_correlations[client_id] = correlation
-            self.local_correlations[client_id] = ((self.current_round - 1)
-            / self.current_round) * self.local_correlations[client_id]
-            + (1 / self.current_round) * correlation
-
-            # Non-linear mapping to node contribution
-            contribs[i] = self.alpha * (1 - math.exp(-math.exp(-self.alpha
-                          * (self.local_correlations[client_id] - 1))))
-
-        return contribs
+        return correlations
 
     @staticmethod
     def process_grad(grads):

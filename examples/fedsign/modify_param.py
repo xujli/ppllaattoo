@@ -1,7 +1,7 @@
 import yaml
 import os
 
-yml_name = 'fedsign_IMDB_RNN.yml'
+yml_name = 'fedsign_MNIST_mlp.yml'
 
 def modify_random_seed(seed):
     with open(yml_name, encoding='UTF-8') as fp:
@@ -23,8 +23,8 @@ def modify_sampler(sampler):
 
 
 if __name__ == '__main__':
-    for sampler in ['noniid']:
+    for sampler in ['orthogonal']:
         modify_sampler(sampler)
-        for seed in range(0, 10):
+        for seed in range(1, 10):
             modify_random_seed(seed)
             os.system('python fedsign.py')
