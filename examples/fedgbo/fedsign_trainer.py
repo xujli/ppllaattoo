@@ -111,6 +111,13 @@ class Trainer(basic.Trainer):
                 else:
                     lr_schedule = None
                 all_labels = []
+
+                if not self.server_update_direction is None:
+                    print(self.server_update_directionp)
+                    for group in optimizer.param_groups:
+                        for p, update in zip(group['params'], self.server_update_direction.values()):
+                            optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
                         if config['datasource'] == 'IMDB':
@@ -137,10 +144,6 @@ class Trainer(basic.Trainer):
                         loss.backward()
 
                         optimizer.step()
-                        if not self.server_update_direction is None:
-                            for group in optimizer.param_groups:
-                                for p, update in zip(group['params'], self.server_update_direction.values()):
-                                    optimizer.state[p]['momentum_buffer'] = update
 
                         if lr_schedule is not None:
                             lr_schedule.step()

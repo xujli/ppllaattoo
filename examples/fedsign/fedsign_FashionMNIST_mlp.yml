@@ -19,14 +19,14 @@ results:
   types: accuracy, training_time, round_time
 server:
   address: 127.0.0.1
-  port: 8003
+  port: 8005
 trainer:
   batch_size: 50
   epochs: 1
   learning_rate: 0.01
   model_name: mlp
-  momentum: 0
-  optimizer: Scaffold
+  momentum: 0.9
+  optimizer: SGD
   parallelized: false
   rounds: 50
   target_accuracy: 0.98

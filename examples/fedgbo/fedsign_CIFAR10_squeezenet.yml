@@ -24,9 +24,9 @@ trainer:
   batch_size: 50
   epochs: 1
   learning_rate: 0.01
-  model_name: alexnet
-  momentum: 0
-  optimizer: Scaffold
+  model_name: shufflenet_0.5
+  momentum: 0.9
+  optimizer: SGD
   parallelized: false
   rounds: 50
   target_accuracy: 0.98

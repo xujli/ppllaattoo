@@ -54,10 +54,14 @@ class Server(fedavg.Server):
             self.momentum_update_direction = {}
             # Use adaptive weighted average
             for name, delta in avg_updates.items():
-                self.momentum_update_direction[name] = 1 / (1 - self.momentum) * (-delta) / (self.alpha * self.batch_nums)
+                if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
+                    continue
+                self.momentum_update_direction[name] = (-delta) / (self.alpha * self.batch_nums)
         else:
             # Use adaptive weighted average
             for name, delta in avg_updates.items():
+                if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
+                    continue
                 self.momentum_update_direction[name] = self.momentum_update_direction[name] * self.momentum + \
                                                        ((-delta) / (self.alpha * self.batch_nums) - \
                                                         self.momentum * self.momentum_update_direction[name])

@@ -31,7 +31,7 @@ class Trainer(basic.Trainer):
         """
         super().__init__(model)
         self.server_update_direction = []
-        self.abs_value = []
+        self.var_values = []
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -111,8 +111,14 @@ class Trainer(basic.Trainer):
                         optimizer, iterations_per_epoch, train_loader)
                 else:
                     lr_schedule = None
-                self.abs_value = []
                 all_labels = []
+
+                if not self.server_update_direction is None:
+                    for group in optimizer.param_groups:
+                        for p, update in zip(group['params'], self.server_update_direction.values()):
+                            optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+
+                self.var_values = []
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
                         if config['datasource'] == 'IMDB':
@@ -137,13 +143,26 @@ class Trainer(basic.Trainer):
                         loss = loss_criterion(outputs, labels)
 
                         loss.backward()
-
+                        # momentum_pre = []
+                        #
+                        # for group in optimizer.param_groups:
+                        #     for p in group['params']:
+                        #         param_state = optimizer.state[p]
+                        #         if 'momentum_buffer' not in param_state:
+                        #             momentum_pre.extend(np.zeros(p.data.shape).flatten())
+                        #         else:
+                        #             momentum_pre.extend(param_state['momentum_buffer'].detach().
+                        #                                 cpu().clone().numpy().flatten())
                         optimizer.step()
-                        if not self.server_update_direction is None:
-                            for group in optimizer.param_groups:
-                                for p, update in zip(group['params'], self.server_update_direction.values()):
-                                    optimizer.state[p]['momentum_buffer'] = update
-
+                        # momentum_post = []
+                        # for group in optimizer.param_groups:
+                        #     for p in group['params']:
+                        #         param_state = optimizer.state[p]
+                        #         momentum_post.extend(param_state['momentum_buffer'].detach().
+                        #                              cpu().clone().numpy().flatten())
+                        #
+                        # self.var_values.append(np.mean(np.abs(np.array(momentum_post) - np.array(momentum_pre) * \
+                        #                                       Config().trainer.momentum)))
                         if lr_schedule is not None:
                             lr_schedule.step()
 
@@ -164,17 +183,8 @@ class Trainer(basic.Trainer):
                                             batch_id, len(train_loader),
                                             loss.data.item()))
 
-                        self.abs = []
-                        for group in optimizer.param_groups:
-                            for p in group['params']:
-                                self.abs.extend(optimizer.state[p]['momentum_buffer'].flatten())
-
-                        self.abs_value.append(torch.mean(torch.abs(torch.tensor(self.abs))).cpu().detach().numpy())
-
                     if hasattr(optimizer, "params_state_update"):
                         optimizer.params_state_update()
-
-
 
         except Exception as training_exception:
             logging.info(training_exception)

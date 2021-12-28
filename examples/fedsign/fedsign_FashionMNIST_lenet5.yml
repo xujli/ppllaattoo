@@ -5,7 +5,7 @@ clients:
   do_test: false
   per_round: 4
   simulation: false
-  total_clients: 40
+  total_clients: 10
 data:
   data_path: ../momentum_adp/data
   datasource: FashionMNIST
@@ -19,14 +19,14 @@ results:
   types: accuracy, training_time, round_time
 server:
   address: 127.0.0.1
-  port: 8003
+  port: 8004
 trainer:
   batch_size: 50
   epochs: 1
   learning_rate: 0.01
   model_name: lenet
-  momentum: 0
-  optimizer: Scaffold
+  momentum: 0.9
+  optimizer: SGD
   parallelized: false
   rounds: 80
   target_accuracy: 0.98
