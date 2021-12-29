@@ -332,7 +332,12 @@ class Trainer(base.Trainer):
         """
         self.model.to(self.device)
         self.model.eval()
-
+        # Initializing the loss criterion
+        _loss_criterion = getattr(self, "loss_criterion", None)
+        if callable(_loss_criterion):
+            loss_criterion = self.loss_criterion(self.model)
+        else:
+            loss_criterion = nn.CrossEntropyLoss()
         try:
             custom_test = getattr(self, "test_model", None)
 
@@ -451,9 +456,16 @@ class Trainer(base.Trainer):
         else:
             test_loader = torch.utils.data.DataLoader(
                 testset, batch_size=config['batch_size'], shuffle=False)
+        # Initializing the loss criterion
+        _loss_criterion = getattr(self, "loss_criterion", None)
+        if callable(_loss_criterion):
+            loss_criterion = self.loss_criterion(self.model)
+        else:
+            loss_criterion = nn.CrossEntropyLoss()
 
         correct = 0
         total = 0
+        total_loss = 0
 
         with torch.no_grad():
             for item in test_loader:
@@ -468,6 +480,7 @@ class Trainer(base.Trainer):
                         self.device)
                     outputs = self.model(examples)
 
+                total_loss += loss_criterion(outputs, labels).detach().cpu().numpy()
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -475,4 +488,4 @@ class Trainer(base.Trainer):
                 # Yield to other tasks in the server
                 await asyncio.sleep(0)
 
-        return correct / total
+        return correct / total, total_loss / len(test_loader)

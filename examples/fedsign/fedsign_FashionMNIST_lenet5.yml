@@ -12,7 +12,7 @@ data:
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
   label_distribution: iid
   partition_size: 1000
-  random_seed: 9
+  random_seed: 0
   sampler: orthogonal
 results:
   plot: round&accuracy, round&training_time

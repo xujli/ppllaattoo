@@ -13,7 +13,7 @@ data:
   label_distribution: iid
   partition_size: 1000
   random_seed: 9
-  sampler: iid
+  sampler: orthogonal
 results:
   plot: round&accuracy, round&training_time
   types: accuracy, training_time, round_time
@@ -28,6 +28,6 @@ trainer:
   momentum: 0.9
   optimizer: SGD
   parallelized: false
-  rounds: 50
+  rounds: 80
   target_accuracy: 0.98
   weight_decay: 0.0

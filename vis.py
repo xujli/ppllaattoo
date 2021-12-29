@@ -26,7 +26,7 @@ def vis(dataset, net, sampler, target_acc=0, vis=True):
         plt.yticks(fontsize=15)
         plt.legend(label_list, fontsize=15)
 
-        plt.savefig('vis/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+        # plt.savefig('vis/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
         plt.show()
 
 def boxplot(dataset, net, sampler, target_acc=0):
@@ -46,5 +46,5 @@ def boxplot(dataset, net, sampler, target_acc=0):
 
 # print(acc1.max(), acc2.max())
 if __name__ == '__main__':
-    # vis('MNIST', 'mlp', 'orthogonal', 70)
-    boxplot('MNIST', 'lenet', 'noniid', 70)
+    vis('FashionMNIST', 'lenet', 'noniid', 70)
+    # boxplot('MNIST', 'lenet', 'noniid', 70)

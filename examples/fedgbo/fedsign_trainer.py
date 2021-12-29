@@ -113,7 +113,6 @@ class Trainer(basic.Trainer):
                 all_labels = []
 
                 if not self.server_update_direction is None:
-                    print(self.server_update_directionp)
                     for group in optimizer.param_groups:
                         for p, update in zip(group['params'], self.server_update_direction.values()):
                             optimizer.state[p]['momentum_buffer'] = update.to(self.device)

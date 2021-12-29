@@ -35,21 +35,13 @@ class Server(fedavg.Server):
         self.coef = np.sum(self.client_momentum ** np.arange(0, self.batch_nums))
         # alpha controls the decreasing rate of the mapping function
         self.alpha = 0.1
+        self.warmup = np.linspace(0, self.alpha, 10)
         self.local_correlations = {}
         self.adaptive_weighting = None
+        self.loss_list = []
 
     def get_trainer(self, model=None):
         return Trainer(model)
-
-    def extract_client_updates(self, updates):
-        weights_received = [payload[0] for (__, payload) in updates]
-        # Extract the total number of samples
-        self.total_samples = sum(
-            [report.num_samples for (report, __) in updates])
-        # Get adaptive weighting based on both node contribution and date size
-        update_received = self.algorithm.compute_weight_updates(weights_received)
-
-        return update_received
 
     def load_trainer(self):
         """Setting up the global model to be trained via federated learning."""
@@ -68,30 +60,8 @@ class Server(fedavg.Server):
         """ Aggregate weight updates and deltas updates from the clients. """
 
         # Perform weighted averaging
-        weights_received = self.extract_client_updates(updates)
+        avg_updates = await super(Server, self).federated_averaging(updates)
 
-        # Extract the total number of samples
-        self.total_samples = sum(
-            [report.num_samples for (report, __) in updates])
-
-        # Perform weighted averaging
-        avg_updates = {
-            name: self.trainer.zeros(weights.shape)
-            for name, weights in weights_received[0].items()
-        }
-
-        for i, update in enumerate(weights_received):
-            report, __ = updates[i]
-            num_samples = report.num_samples
-
-            for name, delta in update.items():
-                # Use weighted average by the number of samples
-                avg_updates[name] += delta * (num_samples / self.total_samples)
-
-            # Yield to other tasks in the server
-            await asyncio.sleep(0)
-        # var_values = np.mean([payload[1] for _, payload in updates], axis=0)
-        # print(var_values[-1] / np.sum(var_values))
         if self.client_momentum_update_direction is None:
             self.client_momentum_update_direction = {}
             # Use adaptive weighted average
@@ -108,25 +78,32 @@ class Server(fedavg.Server):
                                                        ((-delta) / (self.lr * self.batch_nums) - \
                                                         self.client_momentum * self.client_momentum_update_direction[name])
 
-        if self.server_momentum_update_direction is None:
-            self.server_momentum_update_direction = {}
-            # Use adaptive weighted average
-            for name, delta in avg_updates.items():
-                if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
-                    continue
-                self.server_momentum_update_direction[name] = avg_updates[name]
-        else:
-            # Use adaptive weighted average
-            for name, delta in avg_updates.items():
-                if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
-                    continue
-                self.server_momentum_update_direction[name] = self.server_momentum_update_direction[name] * \
-                                                              self.server_momentum + avg_updates[name]
+        # if (len(self.loss_list) > 5) and (np.min(self.loss_list[:-5]) < self.loss):
+        #     self.alpha /= 0.5
+        # if (len(self.loss_list) > 5) and (np.max(self.loss_list[:-5]) > self.loss):
+        #     self.alpha *= 0.5
+        if self.current_round < len(self.warmup):
+            self.alpha = self.warmup[self.current_round]
+
+        # if self.server_momentum_update_direction is None:
+        #     self.server_momentum_update_direction = {}
+        #     # Use adaptive weighted average
+        #     for name, delta in avg_updates.items():
+        #         if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
+        #             continue
+        #         self.server_momentum_update_direction[name] = avg_updates[name]
+        # else:
+        #     # Use adaptive weighted average
+        #     for name, delta in avg_updates.items():
+        #         if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
+        #             continue
+        #         self.server_momentum_update_direction[name] = self.server_momentum_update_direction[name] * \
+        #                                                       self.server_momentum + avg_updates[name]
 
         for name, delta in avg_updates.items():
             if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
                 continue
-            avg_updates[name] = avg_updates[name] + self.alpha * self.server_momentum_update_direction[name]
+            avg_updates[name] = - self.lr * self.client_momentum_update_direction[name] * self.batch_nums
 
         return avg_updates
 

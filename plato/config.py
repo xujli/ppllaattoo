@@ -117,7 +117,14 @@ class Config:
                     model = Config.trainer.model_name
                     server_type = Config.algorithm.type
                     iid = Config.data.sampler
-                    Config.result_dir = f'./results/{total_clients}_{per_round}/{datasource}/{model}/{server_type}/{iid}/'
+                    describe = '{}'.format(Config.trainer.learning_rate)
+                    if Config.trainer.momentum != 0:
+                        describe += '_{}'.format(Config.trainer.momentum)
+                    if hasattr(Config.trainer, 'server_momentum'):
+                        describe += '_{}'.format(Config.trainer.server_momentum)
+                    if hasattr(Config.trainer, 'alpha'):
+                        describe += '_{}'.format(Config.trainer.alpha)
+                    Config.result_dir = f'./results/{total_clients}_{per_round}/{datasource}/{model}/{server_type}/{iid}/{describe}/'
 
             if hasattr(Config().trainer, 'max_concurrency'):
                 # Using a temporary SQLite database to limit the maximum number of concurrent

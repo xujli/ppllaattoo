@@ -45,8 +45,3 @@ class Client(simple.Client):
         self.server_update_direction = server_payload[1]
         self.trainer.server_update_direction = self.server_update_direction
         self.algorithm.load_weights(server_payload[0])
-
-    async def train(self):
-
-        report, weights = await super().train()
-        return report, [weights, self.trainer.var_values]

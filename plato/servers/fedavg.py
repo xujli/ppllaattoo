@@ -153,7 +153,7 @@ class Server(base.Server):
                     os.getpid(), 100 * self.accuracy))
         else:
             # Testing the updated model directly at the server
-            self.accuracy = await self.trainer.server_test(self.testset)
+            self.accuracy, self.loss = await self.trainer.server_test(self.testset)
 
             logging.info(
                 '[Server #{:d}] Global model accuracy: {:.2f}%\n'.format(
@@ -175,6 +175,8 @@ class Server(base.Server):
                     self.current_round,
                     'accuracy':
                     self.accuracy * 100,
+                    'loss':
+                    self.loss,
                     'training_time':
                     max([
                         report.training_time for (report, __) in self.updates

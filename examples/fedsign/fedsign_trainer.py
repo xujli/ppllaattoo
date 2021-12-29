@@ -31,7 +31,6 @@ class Trainer(basic.Trainer):
         """
         super().__init__(model)
         self.server_update_direction = []
-        self.var_values = []
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -118,7 +117,6 @@ class Trainer(basic.Trainer):
                         for p, update in zip(group['params'], self.server_update_direction.values()):
                             optimizer.state[p]['momentum_buffer'] = update.to(self.device)
 
-                self.var_values = []
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
                         if config['datasource'] == 'IMDB':
@@ -143,26 +141,9 @@ class Trainer(basic.Trainer):
                         loss = loss_criterion(outputs, labels)
 
                         loss.backward()
-                        # momentum_pre = []
-                        #
-                        # for group in optimizer.param_groups:
-                        #     for p in group['params']:
-                        #         param_state = optimizer.state[p]
-                        #         if 'momentum_buffer' not in param_state:
-                        #             momentum_pre.extend(np.zeros(p.data.shape).flatten())
-                        #         else:
-                        #             momentum_pre.extend(param_state['momentum_buffer'].detach().
-                        #                                 cpu().clone().numpy().flatten())
+
                         optimizer.step()
-                        # momentum_post = []
-                        # for group in optimizer.param_groups:
-                        #     for p in group['params']:
-                        #         param_state = optimizer.state[p]
-                        #         momentum_post.extend(param_state['momentum_buffer'].detach().
-                        #                              cpu().clone().numpy().flatten())
-                        #
-                        # self.var_values.append(np.mean(np.abs(np.array(momentum_post) - np.array(momentum_pre) * \
-                        #                                       Config().trainer.momentum)))
+
                         if lr_schedule is not None:
                             lr_schedule.step()
 
