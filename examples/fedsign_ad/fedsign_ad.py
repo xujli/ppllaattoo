@@ -10,18 +10,16 @@ https://arxiv.org/pdf/1910.06378.pdf
 """
 import os
 
-os.environ['config_file'] = 'fedsign_ad_MNIST_mlp.yml'
+os.environ['config_file'] = 'fedsign_ad_MNIST_lenet5.yml'
 
 import fedsign_ad_client
-import fedsign_ad_trainer
 import fedsign_ad_server
 
 
 def main():
     """ A Plato federated learning training session using the SCAFFOLD algorithm. """
-    trainer = fedsign_ad_trainer.Trainer()
-    client = fedsign_ad_client.Client(trainer=trainer)
-    server = fedsign_ad_server.Server(trainer=trainer)
+    client = fedsign_ad_client.Client()
+    server = fedsign_ad_server.Server()
 
     server.run(client)
 

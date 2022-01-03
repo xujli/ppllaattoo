@@ -21,7 +21,7 @@ def modify_sampler(sampler):
 
 
 if __name__ == '__main__':
-    for sampler in ['iid', 'noniid', 'orthogonal']:
+    for sampler in ['noniid']:
         modify_sampler(sampler)
         for seed in range(0, 10):
             modify_random_seed(seed)

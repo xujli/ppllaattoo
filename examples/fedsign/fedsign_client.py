@@ -45,3 +45,4 @@ class Client(simple.Client):
         self.server_update_direction = server_payload[1]
         self.trainer.server_update_direction = self.server_update_direction
         self.algorithm.load_weights(server_payload[0])
+

@@ -17,6 +17,8 @@ class Server(fedavg.Server):
         super().__init__(model, algorithm, trainer)
         self.momentum_update_direction = None
         self.beta = Config().trainer.beta
+        self.lr = Config().trainer.learning_rate
+        self.alpha = 1
         self.batch_nums = Config().data.partition_size // Config().trainer.batch_size
         if Config().data.partition_size % Config().trainer.batch_size != 0:
             self.batch_nums += 1
@@ -32,13 +34,13 @@ class Server(fedavg.Server):
             self.momentum_update_direction = {}
             # Use adaptive weighted average
             for name, delta in avg_updates.items():
-                self.momentum_update_direction[name] = delta / self.batch_nums
+                self.momentum_update_direction[name] = - 1 / self.lr * delta
         else:
             # Use adaptive weighted average
             for name, delta in avg_updates.items():
-                self.momentum_update_direction[name] = (1 - self.beta) * delta / self.batch_nums + \
+                self.momentum_update_direction[name] = - delta / self.lr + \
                     self.beta * self.momentum_update_direction[name]
-                avg_updates[name] = self.momentum_update_direction[name]
+                avg_updates[name] = - self.alpha * self.lr * self.momentum_update_direction[name]
 
         return avg_updates
 

@@ -16,7 +16,7 @@ data:
   sampler: orthogonal
 results:
   plot: round&accuracy, round&training_time
-  types: accuracy, training_time, round_time
+  types: accuracy, training_time, round_time, loss
 server:
   address: 127.0.0.1
   port: 8009

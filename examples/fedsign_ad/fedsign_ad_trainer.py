@@ -17,7 +17,6 @@ from plato.config import Config
 from plato.trainers import basic
 
 from plato.utils import optimizers
-import fedsign_ad_optimizer
 
 
 class Trainer(basic.Trainer):
@@ -30,22 +29,9 @@ class Trainer(basic.Trainer):
         client_id: The ID of the client using this trainer (optional).
         """
         super().__init__(model)
-        self.epoch_num = 12
-        self.server_update_direction = None
-        self.train_init_model = None
-
-    def get_optimizer(self, model):
-        """Initialize the SCAFFOLD optimizer."""
-        optimizer = fedsign_ad_optimizer.ScaffoldOptimizer(
-            model.parameters(),
-            lr=Config().trainer.learning_rate,
-            momentum=Config().trainer.momentum,
-            weight_decay=Config().trainer.weight_decay)
-
-        self.train_init_model = model
-        optimizer.server_update_direction = self.server_update_direction
-        # print(len(self.server_update_direction), len(model.parameters()))
-        return optimizer
+        self.server_update_direction = []
+        self.norms = []
+        self.momentum = Config().trainer.momentum
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -83,11 +69,21 @@ class Trainer(basic.Trainer):
                     train_loader = self.train_loader(batch_size, trainset,
                                                      sampler.get(), cut_layer)
                 else:
-                    train_loader = torch.utils.data.DataLoader(
-                        dataset=trainset,
-                        shuffle=False,
-                        batch_size=batch_size,
-                        sampler=sampler.get())
+                    if config['datasource'] == 'IMDB':
+                        train_loader = torch.utils.data.DataLoader(
+                            dataset=trainset,
+                            shuffle=False,
+                            batch_size=batch_size,
+                            sampler=sampler.get(),
+                            collate_fn=self.collate_batch,
+                        )
+                    else:
+                        train_loader = torch.utils.data.DataLoader(
+                            dataset=trainset,
+                            shuffle=False,
+                            batch_size=batch_size,
+                            sampler=sampler.get()
+                        )
 
                 iterations_per_epoch = np.ceil(len(trainset) /
                                                batch_size).astype(int)
@@ -108,12 +104,7 @@ class Trainer(basic.Trainer):
                 get_optimizer = getattr(self, "get_optimizer",
                                         optimizers.get_optimizer)
                 optimizer = get_optimizer(self.model)
-                optimizer.batches_num = len(train_loader)
-                if hasattr(config, 'alpha'):
-                    optimizer.alpha = config['alpha']
 
-                logging.info("[Client #%d] Loading the Batch nums %d.",
-                             self.client_id, optimizer.batches_num)
                 # Initializing the learning rate schedule, if necessary
                 if hasattr(config, 'lr_schedule'):
                     lr_schedule = optimizers.get_lr_schedule(
@@ -121,34 +112,45 @@ class Trainer(basic.Trainer):
                 else:
                     lr_schedule = None
                 all_labels = []
+
+                if self.server_update_direction is None:
+                    self.server_update_direction = {}
+                    for group in optimizer.param_groups:
+                        for p in group['params']:
+                            self.server_update_direction[p] = torch.zeros(p.shape).to(self.device)
+
+
+                self.norms = []
                 for epoch in range(1, epochs + 1):
-                    for batch_id, (examples,
-                                   labels) in enumerate(train_loader):
-                        examples, labels = examples.to(self.device), labels.to(
-                            self.device)
+                    for batch_id, item in enumerate(train_loader):
+                        if config['datasource'] == 'IMDB':
+                            examples, labels, offsets = item
+                            examples, labels, offsets = examples.to(self.device), labels.to(
+                                self.device), offsets.to(self.device)
+                        else:
+                            examples, labels = item
+                            examples, labels = examples.to(self.device), labels.to(
+                                self.device)
+
                         optimizer.zero_grad()
+                        for group in optimizer.param_groups:
+                            for p, update in zip(group['params'], self.server_update_direction.values()):
+                                optimizer.state[p]['momentum_buffer'] = update.to(self.device)
                         all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
-                            outputs = self.model(examples)
-                            outputs_init = self.train_init_model(examples)
+                            outputs = self.model(examples) if config['datasource'] != 'IMDB' else \
+                                self.model(examples, offsets)
                         else:
                             outputs = self.model.forward_from(
                                 examples, cut_layer)
-                            outputs_init = self.train_init_model(examples)
 
                         loss = loss_criterion(outputs, labels)
 
                         loss.backward()
 
-                        loss1 = loss_criterion(outputs_init, labels)
-                        loss1.backward()
-                        init_grad = []
-                        for name, item in self.train_init_model.named_parameters():
-                            init_grad.append(item.grad.data.clone())
-                            item.grad.data.zero_()
+                        optimizer.step()
 
-                        optimizer.step(init_grad)
 
                         if lr_schedule is not None:
                             lr_schedule.step()
@@ -174,6 +176,7 @@ class Trainer(basic.Trainer):
                         optimizer.params_state_update()
 
         except Exception as training_exception:
+            logging.info(training_exception)
             logging.info("Training on client #%d failed.", self.client_id)
             raise training_exception
 

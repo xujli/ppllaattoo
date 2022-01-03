@@ -17,7 +17,6 @@ from plato.config import Config
 from plato.trainers import basic
 
 from plato.utils import optimizers
-import fedsign_optimizer
 
 
 class Trainer(basic.Trainer):
@@ -31,6 +30,8 @@ class Trainer(basic.Trainer):
         """
         super().__init__(model)
         self.server_update_direction = []
+        self.norms = []
+        self.momentum = Config().trainer.momentum
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -112,11 +113,17 @@ class Trainer(basic.Trainer):
                     lr_schedule = None
                 all_labels = []
 
-                if not self.server_update_direction is None:
+                if self.server_update_direction is None:
+                    self.server_update_direction = {}
                     for group in optimizer.param_groups:
-                        for p, update in zip(group['params'], self.server_update_direction.values()):
-                            optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+                        for p in group['params']:
+                            self.server_update_direction[p] = torch.zeros(p.shape).to(self.device)
 
+                for group in optimizer.param_groups:
+                    for p, update in zip(group['params'], self.server_update_direction.values()):
+                        optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+
+                self.norms = []
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
                         if config['datasource'] == 'IMDB':
@@ -129,6 +136,9 @@ class Trainer(basic.Trainer):
                                 self.device)
 
                         optimizer.zero_grad()
+                        for group in optimizer.param_groups:
+                            for p, update in zip(group['params'], self.server_update_direction.values()):
+                                optimizer.state[p]['momentum_buffer'] = update.to(self.device)
                         all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
@@ -144,6 +154,12 @@ class Trainer(basic.Trainer):
 
                         optimizer.step()
 
+                        # gradients = []
+                        # for group in optimizer.param_groups:
+                        #     for p, update in zip(group['params'], self.server_update_direction.values()):
+                        #         gradients.extend((optimizer.state[p]['momentum_buffer'] - \
+                        #                          update.to(self.device) * self.momentum).detach().cpu().numpy().flatten())
+                        # self.norms.append(np.linalg.norm(gradients))
                         if lr_schedule is not None:
                             lr_schedule.step()
 

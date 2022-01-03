@@ -7,6 +7,7 @@ clients:
   simulation: false
   total_clients: 10
 data:
+  concentration: 10
   data_path: ../momentum_adp/data
   datasource: FashionMNIST
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
@@ -16,7 +17,7 @@ data:
   sampler: orthogonal
 results:
   plot: round&accuracy, round&training_time
-  types: accuracy, training_time, round_time
+  types: accuracy, training_time, round_time, loss
 server:
   address: 127.0.0.1
   port: 8004

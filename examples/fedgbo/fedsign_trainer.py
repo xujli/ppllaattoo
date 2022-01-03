@@ -112,10 +112,11 @@ class Trainer(basic.Trainer):
                     lr_schedule = None
                 all_labels = []
 
-                if not self.server_update_direction is None:
+                if self.server_update_direction is None:
+                    self.server_update_direction = {}
                     for group in optimizer.param_groups:
-                        for p, update in zip(group['params'], self.server_update_direction.values()):
-                            optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+                        for p in group['params']:
+                            self.server_update_direction[p] = torch.zeros(p.shape).to(self.device)
 
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
@@ -129,6 +130,10 @@ class Trainer(basic.Trainer):
                                 self.device)
 
                         optimizer.zero_grad()
+
+                        for group in optimizer.param_groups:
+                            for p, update in zip(group['params'], self.server_update_direction.values()):
+                                optimizer.state[p]['momentum_buffer'] = update.to(self.device)
                         all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
