@@ -1,7 +1,7 @@
 import yaml
 import os
 
-yml_name = 'fedsign_ad_MNIST_lenet5.yml'
+yml_name = 'fedsign_ad_FashionMNIST_lenet5.yml'
 
 def modify_random_seed(seed):
     with open(yml_name, encoding='UTF-8') as fp:
@@ -23,7 +23,7 @@ def modify_sampler(sampler):
 
 
 if __name__ == '__main__':
-    for sampler in ['iid', 'noniid', ]:
+    for sampler in ['noniid']:
         modify_sampler(sampler)
         for seed in range(0, 10):
             modify_random_seed(seed)

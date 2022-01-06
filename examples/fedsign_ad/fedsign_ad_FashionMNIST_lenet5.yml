@@ -12,8 +12,8 @@ data:
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
   label_distribution: iid
   partition_size: 1000
-  random_seed: 5
-  sampler: iid
+  random_seed: 9
+  sampler: noniid
 results:
   plot: round&accuracy, round&training_time
   types: accuracy, training_time, round_time, loss
@@ -22,6 +22,7 @@ server:
   port: 8004
 trainer:
   batch_size: 50
+  beta: 0.9
   epochs: 1
   learning_rate: 0.01
   model_name: lenet

@@ -119,8 +119,7 @@ class Trainer(basic.Trainer):
                         for p in group['params']:
                             self.server_update_direction[p] = torch.zeros(p.shape).to(self.device)
 
-
-                self.norms = []
+                self.losses = []
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
                         if config['datasource'] == 'IMDB':
@@ -148,7 +147,7 @@ class Trainer(basic.Trainer):
                         loss = loss_criterion(outputs, labels)
 
                         loss.backward()
-
+                        self.losses.append(loss.detach().cpu().numpy())
                         optimizer.step()
 
 

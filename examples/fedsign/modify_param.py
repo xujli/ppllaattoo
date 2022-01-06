@@ -25,6 +25,6 @@ def modify_sampler(sampler):
 if __name__ == '__main__':
     for sampler in ['orthogonal']:
         modify_sampler(sampler)
-        for seed in range(0, 10):
+        for seed in range(1, 10):
             modify_random_seed(seed)
             os.system('python fedsign.py')

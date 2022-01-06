@@ -29,7 +29,7 @@ class Server(fedavg.Server):
         self.server_momentum_update_direction = None
         self.lr = Config().trainer.learning_rate
         self.client_momentum = Config().trainer.momentum
-        self.server_momentum = Config().trainer.momentum
+        self.server_momentum = Config().trainer.beta
         self.batch_nums = Config().data.partition_size // Config().trainer.batch_size
         if Config().data.partition_size % Config().trainer.batch_size != 0:
             self.batch_nums += 1
@@ -95,7 +95,7 @@ class Server(fedavg.Server):
         for i, update in enumerate(weights_received):
             for name, delta in update.items():
                 avg_updates[name] += delta * self.adaptive_weighting[i]
-        print(self.adaptive_weighting)
+
         # self.client_gradient = {
         #     name: self.trainer.zeros(weights.shape)
         #     for name, weights in weights_received[0].items()
@@ -137,7 +137,7 @@ class Server(fedavg.Server):
                     continue
                 self.client_gradient[name] = ((-delta) / (self.lr * self.batch_nums) - \
                                                         self.client_momentum * self.client_momentum_update_direction[name])
-                self.client_momentum_update_direction[name] = self.client_momentum_update_direction[name] * self.client_momentum + \
+                self.client_momentum_update_direction[name] = self.client_momentum_update_direction[name] * self.server_momentum + \
                                                                 self.client_gradient[name]
 
         # if (len(self.loss_list) > 5) and (np.min(self.loss_list[:-5]) < self.loss):
@@ -163,10 +163,10 @@ class Server(fedavg.Server):
         #         self.server_momentum_update_direction[name] = self.server_momentum_update_direction[name] * \
         #                                                       self.server_momentum + self.client_gradient[name]
 
-        for name, delta in avg_updates.items():
-            if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
-                continue
-            avg_updates[name] = - self.client_momentum_update_direction[name] * self.lr * self.batch_nums
+        # for name, delta in avg_updates.items():
+        #     if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
+        #         continue
+        #     avg_updates[name] = - self.client_momentum_update_direction[name] * self.lr * self.batch_nums
 
         return avg_updates
 

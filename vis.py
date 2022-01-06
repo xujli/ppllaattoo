@@ -13,7 +13,7 @@ def get_acc(dir):
 
 
 def vis_acc(dataset, net, sampler, target_acc=0, vis=True):
-    label_list = ['FedAM', 'Local Momentum', 'Server Momentum', 'FedGbo', 'FedAvg', 'FedProx', 'FedSign_ad']
+    label_list = ['FedAM', 'Local Momentum', 'Server Momentum', 'FedAvg', 'FedProx', 'FedGbo', 'FedSign_ad']
     for label in label_list:
         acc4, max_acc, std = get_acc(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
 
@@ -28,7 +28,7 @@ def vis_acc(dataset, net, sampler, target_acc=0, vis=True):
         plt.yticks(fontsize=15)
         plt.legend(label_list, fontsize=15)
 
-        # plt.savefig('vis/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+        plt.savefig('vis/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
         plt.show()
 
 def get_loss(dir):
@@ -40,7 +40,7 @@ def get_loss(dir):
     return np.mean(loss1, axis=0), np.max(loss1, axis=1), np.std(loss1, axis=0)
 
 def vis_loss(dataset, net, sampler, target_acc=0, vis=True):
-    label_list = ['FedAM', 'FedGbo']
+    label_list = ['FedAM', 'Local Momentum', 'FedGbo']
     for label in label_list:
         loss4, max_acc, std = get_loss(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
 
@@ -55,7 +55,7 @@ def vis_loss(dataset, net, sampler, target_acc=0, vis=True):
         plt.yticks(fontsize=15)
         plt.legend(label_list, fontsize=15)
 
-        # plt.savefig('vis/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+        plt.savefig('vis/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
         plt.show()
 
 def boxplot(dataset, net, sampler, target_acc=0):
@@ -75,5 +75,5 @@ def boxplot(dataset, net, sampler, target_acc=0):
 
 # print(acc1.max(), acc2.max())
 if __name__ == '__main__':
-    vis_acc('MNIST', 'lenet', 'iid', 70)
+    vis_acc('FashionMNIST', 'lenet', 'noniid', 70)
     # boxplot('MNIST', 'lenet', 'noniid', 70)
