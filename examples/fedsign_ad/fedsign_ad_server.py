@@ -69,18 +69,17 @@ class Server(fedavg.Server):
         # else:
         #     gradients_update = [{name: -delta / self.lr / self.batch_nums - self.client_momentum * self.client_momentum_update_direction[name] for name, delta in update.items()} for update
         #                         in update_received]
-        old_weights = self.algorithm.extract_weights()
 
-        self.weight_matrix = []
+        self.weight_matrix = {}
         for name in weights_received[0].keys():
-            norm = []
-            for weight in weights_received:
-                norm.append(np.linalg.norm(old_weights[name] - weight[name]))
-            mean = np.mean(norm)
-            var = np.var(norm)
-            weights = np.exp(-((norm-mean)**2/(2*var))) * 1 / (np.sqrt(var*2*np.pi))
-            weights = weights / np.sum(weights)
-            self.weight_matrix.append(weights)
+            layer_weight = [] # num_selected_works ,num_selected_works
+            for weight1 in weights_received:
+                norm = []
+                for weight2 in weights_received:
+                    norm.append(np.linalg.norm(weight1[name] - weight2[name]))
+                layer_weight.append(norm)
+            print(layer_weight)
+            self.weight_matrix[name] = layer_weight
 
         # losses = [payload[1] for (__, payload) in updates]
         # self.losses = np.sum(losses, axis=1)
@@ -122,7 +121,7 @@ class Server(fedavg.Server):
         # Use adaptive weighted average
         for i, update in enumerate(update_received):
             for j, (name, delta) in enumerate(update.items()):
-                avg_updates[name] += delta * self.weight_matrix[j][i]
+                avg_updates[name] += delta * np.sum(self.weight_matrix[name][i]) / np.sum(self.weight_matrix[name])
 
         # self.client_gradient = {
         #     name: self.trainer.zeros(weights.shape)

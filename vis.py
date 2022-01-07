@@ -13,13 +13,13 @@ def get_acc(dir):
 
 
 def vis_acc(dataset, net, sampler, target_acc=0, vis=True):
-    label_list = ['FedAM', 'Local Momentum', 'Server Momentum', 'FedAvg', 'FedProx', 'FedGbo', 'FedSign_ad']
+    label_list = ['FedAM', 'Local Momentum', 'Server Momentum', 'FedGbo', 'FedSign_ad']
     for label in label_list:
         acc4, max_acc, std = get_acc(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
 
         plt.plot(acc4)
         # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
-        print(np.mean(max_acc), np.std(max_acc))
+        print('{:.3f} {:.3f}'.format(np.mean(max_acc), np.std(max_acc)))
 
     if vis:
         plt.tight_layout()
