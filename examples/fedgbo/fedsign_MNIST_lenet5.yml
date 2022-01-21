@@ -3,17 +3,17 @@ algorithm:
   type: fedavg
 clients:
   do_test: false
-  per_round: 4
+  per_round: 10
   simulation: false
-  total_clients: 10
+  total_clients: 50
 data:
-  concentration: 0.5
+  concentration: 0.1
   data_path: ../momentum_adp/data
   datasource: MNIST
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
   label_distribution: iid
-  partition_size: 600
-  random_seed: 9
+  partition_size: 400
+  random_seed: 5
   sampler: noniid
 results:
   plot: round&accuracy, round&training_time

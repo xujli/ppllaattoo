@@ -13,11 +13,11 @@ import torch
 import logging
 import numpy as np
 import torch.nn as nn
+
 from plato.config import Config
 from plato.trainers import basic
-
 from plato.utils import optimizers
-
+from copy import deepcopy
 
 class Trainer(basic.Trainer):
     """The federated learning trainer for the SCAFFOLD client. """
@@ -29,9 +29,13 @@ class Trainer(basic.Trainer):
         client_id: The ID of the client using this trainer (optional).
         """
         super().__init__(model)
-        self.server_update_direction = []
+        self.update_direction = None
         self.norms = []
+        self.selected = False
+        self.diff = None
         self.momentum = Config().trainer.momentum
+        self.alpha = Config().trainer.alpha
+
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -113,13 +117,14 @@ class Trainer(basic.Trainer):
                     lr_schedule = None
                 all_labels = []
 
-                if self.server_update_direction is None:
-                    self.server_update_direction = {}
+                if self.update_direction is None:
+                    self.update_direction = {}
                     for group in optimizer.param_groups:
                         for p in group['params']:
-                            self.server_update_direction[p] = torch.zeros(p.shape).to(self.device)
+                            self.update_direction[p] = torch.zeros(p.shape).to(self.device)
 
-                self.losses = []
+                self.global_model = deepcopy(self.model.state_dict())
+                cnt = 0
                 for epoch in range(1, epochs + 1):
                     for batch_id, item in enumerate(train_loader):
                         if config['datasource'] == 'IMDB':
@@ -133,8 +138,9 @@ class Trainer(basic.Trainer):
 
                         optimizer.zero_grad()
                         for group in optimizer.param_groups:
-                            for p, update in zip(group['params'], self.server_update_direction.values()):
+                            for p, update in zip(group['params'], self.update_direction.values()):
                                 optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+
                         all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
@@ -147,9 +153,21 @@ class Trainer(basic.Trainer):
                         loss = loss_criterion(outputs, labels)
 
                         loss.backward()
-                        self.losses.append(loss.detach().cpu().numpy())
+
                         optimizer.step()
 
+                        if cnt == 0:
+                            for name, params in self.model.named_parameters():
+                                params.grad.data.add_(params.data - self.global_model[name], alpha=self.alpha)
+                                params.grad.data.add_(self.last_model[name] - params.data, alpha=self.alpha)
+                        else:
+                            for (name, params), value in zip(self.model.named_parameters(), self.update_direction.values()):
+                                params.grad.data.add_(params.data - self.global_model[name] + \
+                                                      value * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha)
+                                params.grad.data.add_(self.last_model[name] - params.data - \
+                                                      value * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha)
+                        cnt += 1
+                        optimizer.step()
 
                         if lr_schedule is not None:
                             lr_schedule.step()
@@ -173,6 +191,12 @@ class Trainer(basic.Trainer):
 
                     if hasattr(optimizer, "params_state_update"):
                         optimizer.params_state_update()
+
+                self.last_gradient = []
+                for group in optimizer.param_groups:
+                    for p in group['params']:
+                        self.last_gradient.append(p.grad.data)
+
 
         except Exception as training_exception:
             logging.info(training_exception)

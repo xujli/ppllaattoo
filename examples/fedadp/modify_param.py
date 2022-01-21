@@ -1,7 +1,7 @@
 import yaml
 import os
 
-yml_name = 'fedadp_IMDB_RNN.yml'
+yml_name = 'fedadp_MNIST_lenet5.yml'
 
 def modify_random_seed(seed):
     with open(yml_name, encoding='UTF-8') as fp:
@@ -23,8 +23,8 @@ def modify_sampler(sampler):
 
 
 if __name__ == '__main__':
-    for sampler in ['orthogonal']:
+    for sampler in ['mixed']:
         modify_sampler(sampler)
-        for seed in range(0, 5):
+        for seed in range(0, 10):
             modify_random_seed(seed)
             os.system('python fedadp.py')

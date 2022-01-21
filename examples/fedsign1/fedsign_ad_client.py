@@ -12,6 +12,7 @@ from fedsign_ad_trainer import Trainer
 from plato.clients import simple
 from plato.algorithms import registry as algorithms_registry
 from plato.trainers import registry as trainers_registry
+
 from copy import deepcopy
 
 class Client(simple.Client):
@@ -43,8 +44,7 @@ class Client(simple.Client):
     def load_payload(self, server_payload):
         " Load model weights and server update direction from server payload onto this client. "
         self.trainer.last_model = deepcopy(self.algorithm.extract_weights())
-        self.trainer.update_direction = server_payload[1]
-        self.algorithm.load_weights(server_payload[0])
+        self.algorithm.load_weights(server_payload)
 
 
     async def train(self):

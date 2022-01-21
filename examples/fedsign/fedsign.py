@@ -11,7 +11,8 @@ https://arxiv.org/pdf/1910.06378.pdf
 import os
 
 os.environ['config_file'] = 'fedsign_MNIST_lenet5.yml'
-
+import logging
+logging.basicConfig(level=logging.CRITICAL)
 import fedsign_client
 from fedsign_server import Server
 

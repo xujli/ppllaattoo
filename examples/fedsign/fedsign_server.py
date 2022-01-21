@@ -36,13 +36,7 @@ class Server(fedavg.Server):
         self.batch_nums *= Config().trainer.epochs
         # alpha controls the decreasing rate of the mapping function
         self.alpha = 5
-        self.coef1 = np.sum(np.power(self.client_momentum, np.arange(1, self.batch_nums + 1)))
-        self.coef2 = 0
-        for i in range(self.batch_nums):
-            for j in range(i+1):
-                self.coef2 += self.client_momentum ** j
 
-        self.coef3 = np.sum(np.power(self.client_momentum, np.arange(self.batch_nums)))
         self.local_correlations = {}
         self.adaptive_weighting = None
         self.loss_list = []
@@ -75,7 +69,7 @@ class Server(fedavg.Server):
         else:
             gradients_update = [{name: -delta / self.lr / self.batch_nums - self.client_momentum * self.client_momentum_update_direction[name] for name, delta in update.items()} for update
                                 in update_received]
-        self.adaptive_weighting = self.calc_adaptive_weighting(gradients_update, num_samples)
+        self.adaptive_weighting = self.calc_adaptive_weighting(update_received, num_samples)
 
         return update_received
 
@@ -230,7 +224,7 @@ class Server(fedavg.Server):
             contribs[i] = self.alpha * (1 - np.exp(-np.exp(-self.alpha
                           * (self.local_correlations[client_id] - 1))))
 
-        return correlations
+        return contribs
 
     @staticmethod
     def process_grad(grads):

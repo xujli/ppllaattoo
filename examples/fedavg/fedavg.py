@@ -1,6 +1,6 @@
 import os
 
-os.environ['config_file'] = './fedavg_FashionMNIST_lenet5.yml'
+os.environ['config_file'] = './fedavg_MNIST_lenet.yml'
 
 from plato.servers import fedavg
 
