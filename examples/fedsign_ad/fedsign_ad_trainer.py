@@ -154,7 +154,7 @@ class Trainer(basic.Trainer):
 
                         loss.backward()
 
-                        optimizer.step()
+                        # optimizer.step()
 
                         if cnt == 0:
                             for name, params in self.model.named_parameters():

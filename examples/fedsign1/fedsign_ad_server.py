@@ -67,7 +67,6 @@ class Server(fedavg.Server):
         # Extract the total number of samples
         self.total_samples = sum(
             [report.num_samples for (report, __) in updates])
-        num_samples = [report.num_samples for (report, __) in updates]
         # Get adaptive weighting based on both node contribution and date size
         update_received = self.algorithm.compute_weight_updates(weights_received)
 
@@ -87,24 +86,9 @@ class Server(fedavg.Server):
         # Use adaptive weighted average
         for i, update in enumerate(update_received):
             for j, (name, delta) in enumerate(update.items()):
-                # avg_updates[name] += delta * (np.exp(-self.norm_matrix[name][i]) + self.alpha * np.exp(-self.deviation_matrix[name][i])) / \
-                #                      (np.sum(np.exp(-np.array(self.norm_matrix[name]))) + self.alpha * np.sum(np.exp(-np.array(self.deviation_matrix[name]))))
                 avg_updates[name] += delta * num_samples[i] / self.total_samples
 
         return avg_updates
-        # is reweighting useful?
-        # moving mean
-        # attentive weighting
-        # direction and distance
-        # STORM
-        # VRLSGD
-        # client selection
-
-    # FLOB
-
-    # def customize_server_payload(self, payload):
-    #     "Add server control variates into the server payload."
-    #     return [payload, self.client_momentum_update_direction, self.diff]
 
     @staticmethod
     def process_grad(grads):

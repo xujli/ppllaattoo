@@ -3,6 +3,19 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
+
+def EMA(curve):
+    alpha = 0.5
+    state = 0
+    smoothed_curve = []
+    for item in curve:
+        if len(smoothed_curve) == 0:
+            state = item
+        else:
+            state = alpha * item + state * (1 - alpha)
+        smoothed_curve.append(state)
+    return np.array(smoothed_curve)
+
 def get_acc(dir):
     acc1 = []
     for file in os.listdir(dir):
@@ -14,11 +27,11 @@ def get_acc(dir):
 
 
 def vis_acc(dataset, net, sampler, target_acc=0, vis=True):
-    label_list = ['FedAM', 'FedAvg', 'FedProx', 'Local Momentum', 'Server Momentum', 'FedGbo', 'FedSign_ad']
+    label_list = ['FedAM', 'Local Momentum', 'Server Momentum', 'FedProx']
     for label in label_list:
         acc4, max_acc, std = get_acc(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
 
-        plt.plot(acc4)
+        plt.plot(EMA(acc4))
         # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
         print('{:.3f} {:.3f}'.format(np.mean(max_acc), np.std(max_acc)))
 
@@ -74,7 +87,9 @@ def boxplot(dataset, net, sampler, target_acc=0):
     plt.boxplot(accs, labels=label_list)
     plt.show()
 
+
+
 # print(acc1.max(), acc2.max())
 if __name__ == '__main__':
-    vis_acc('MNIST', 'lenet', 'noniid_0.5', 70)
+    vis_acc('FashionMNIST', 'mlp', 'noniid', 70)
     # boxplot('MNIST', 'lenet', 'noniid', 70)

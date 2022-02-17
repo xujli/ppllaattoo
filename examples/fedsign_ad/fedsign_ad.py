@@ -10,7 +10,7 @@ https://arxiv.org/pdf/1910.06378.pdf
 """
 import os
 
-os.environ['config_file'] = 'fedsign_ad_MNIST_lenet5.yml'
+os.environ['config_file'] = 'fedsign_ad_FashionMNIST_mlp.yml'
 
 import fedsign_ad_client
 import fedsign_ad_server

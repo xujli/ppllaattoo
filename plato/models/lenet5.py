@@ -24,7 +24,8 @@ class Model(nn.Module):
 
         # We pad the image to get an input size of 32x32 as for the
         # original network in the LeCun paper
-        self.conv1 = nn.Conv2d(in_channels=1,
+        self.conv1 = nn.Conv2d(in_channels=1 if Config().data.datasource == 'MNIST' or \
+                                                Config().data.datasource == 'FashionMNIST' else 3,
                                out_channels=6,
                                kernel_size=5,
                                stride=1,

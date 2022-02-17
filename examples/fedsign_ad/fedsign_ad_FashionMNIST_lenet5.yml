@@ -7,13 +7,13 @@ clients:
   simulation: false
   total_clients: 10
 data:
-  concentration: 0.5
+  concentration: 10
   data_path: ../momentum_adp/data
   datasource: FashionMNIST
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
   label_distribution: iid
   partition_size: 1000
-  random_seed: 3
+  random_seed: 1
   sampler: noniid
 results:
   plot: round&accuracy, round&training_time
@@ -22,6 +22,7 @@ server:
   address: 127.0.0.1
   port: 8004
 trainer:
+  alpha: 0.5
   batch_size: 50
   beta: 0.9
   epochs: 1
@@ -30,6 +31,6 @@ trainer:
   momentum: 0.9
   optimizer: SGD
   parallelized: false
-  rounds: 50
+  rounds: 80
   target_accuracy: 0.98
   weight_decay: 0.0

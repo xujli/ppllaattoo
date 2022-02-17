@@ -71,13 +71,13 @@ class Server(fedavg.Server):
         # Get adaptive weighting based on both node contribution and date size
         update_received = self.algorithm.compute_weight_updates(weights_received)
 
-        if self.client_momentum_update_direction is None:
-            gradients_update = [{name: -delta / self.lr / self.batch_nums for name, delta in update.items()} for update in update_received]
-
-        else:
-            gradients_update = [{name: -delta / self.lr / self.batch_nums - self.client_momentum * self.client_momentum_update_direction[name] for name, delta in update.items()} for update
-                                in update_received]
-        self.clients_gradient = gradients_update
+        # if self.client_momentum_update_direction is None:
+        #     gradients_update = [{name: -delta / self.lr / self.batch_nums for name, delta in update.items()} for update in update_received]
+        #
+        # else:
+        #     gradients_update = [{name: -delta / self.lr / self.batch_nums - self.client_momentum * self.client_momentum_update_direction[name] for name, delta in update.items()} for update
+        #                         in update_received]
+        # self.clients_gradient = gradients_update
         #
         # self.client_gradient = {}
         # for name in gradients_update[0].keys():
