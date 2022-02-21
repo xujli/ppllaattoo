@@ -1,3 +1,4 @@
+LICENSE
 README.md
 setup.py
 plato/__init__.py
@@ -20,6 +21,7 @@ plato/datasources/__init__.py
 plato/datasources/base.py
 plato/datasources/cifar10.py
 plato/datasources/cinic10.py
+plato/datasources/emnist.py
 plato/datasources/fashion_mnist.py
 plato/datasources/femnist.py
 plato/datasources/huggingface.py

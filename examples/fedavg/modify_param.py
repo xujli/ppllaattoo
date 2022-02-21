@@ -1,7 +1,7 @@
 import yaml
 import os
 
-yml_name = 'fedavg_MNIST_lenet.yml'
+yml_name = 'fedavg_FashionMNIST_lenet.yml'
 
 def modify_random_seed(seed):
     with open(yml_name, encoding='UTF-8') as fp:

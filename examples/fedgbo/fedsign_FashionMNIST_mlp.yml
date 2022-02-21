@@ -7,13 +7,14 @@ clients:
   simulation: false
   total_clients: 10
 data:
+  concentration: 0.5
   data_path: ../momentum_adp/data
   datasource: FashionMNIST
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
   label_distribution: iid
   partition_size: 1000
-  random_seed: 0
-  sampler: orthogonal
+  random_seed: 10
+  sampler: noniid
 results:
   plot: round&accuracy, round&training_time
   types: accuracy, training_time, round_time
@@ -26,8 +27,8 @@ trainer:
   learning_rate: 0.01
   model_name: mlp
   momentum: 0.9
-  optimizer: Scaffold
+  optimizer: SGD
   parallelized: false
-  rounds: 80
+  rounds: 50
   target_accuracy: 0.98
   weight_decay: 0.0

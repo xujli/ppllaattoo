@@ -1,7 +1,7 @@
 import yaml
 import os
 
-yml_name = 'fedsign_MNIST_lenet5.yml'
+yml_name = 'fedsign_MNIST_mlp.yml'
 
 def modify_random_seed(seed):
     with open(yml_name, encoding='UTF-8') as fp:
@@ -30,8 +30,8 @@ def modify_concentration(concentration):
 
 
 if __name__ == '__main__':
-    for concentration in [0.1]:
-        modify_concentration(concentration)
-        for seed in range(5, 11):
+    for sampler in ['noniid']:
+        modify_sampler(sampler)
+        for seed in range(1, 11):
             modify_random_seed(seed)
             os.system('python fedsign.py')

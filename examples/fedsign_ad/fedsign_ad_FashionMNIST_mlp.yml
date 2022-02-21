@@ -22,7 +22,7 @@ server:
   address: 127.0.0.1
   port: 8006
 trainer:
-  alpha: 0.3
+  alpha: 0.05
   batch_size: 50
   beta: 0.9
   epochs: 1

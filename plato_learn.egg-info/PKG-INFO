@@ -5,8 +5,6 @@ Summary: Packaged version of the Plato framework for federated learning research
 Home-page: https://github.com/TL-System/plato
 Author: 
 License: Apache-2.0
-Description: Plato: a new scalable research framework for federated learning
-        
 Keywords: machine-learning,deep-learning,edge-learning,federated-learning
 Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha
@@ -26,3 +24,8 @@ Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
 Requires-Python: >=3.6
 Description-Content-Type: text/markdown
 Provides-Extra: tests
+License-File: LICENSE
+
+Plato: a new scalable research framework for federated learning
+
+

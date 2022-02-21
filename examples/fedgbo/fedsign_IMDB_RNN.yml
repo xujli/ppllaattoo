@@ -26,7 +26,7 @@ trainer:
   learning_rate: 2
   model_name: rnn
   momentum: 0
-  optimizer: Scaffold
+  optimizer: SGD
   parallelized: false
   rounds: 50
   target_accuracy: 0.98

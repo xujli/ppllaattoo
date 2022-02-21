@@ -13,7 +13,7 @@ import torch
 import random
 import numpy as np
 from plato.config import Config
-os.environ['config_file'] = 'SM_MNIST_lenet5.yml'
+os.environ['config_file'] = 'SM_EMNIST_lenet.yml'
 def setup_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
