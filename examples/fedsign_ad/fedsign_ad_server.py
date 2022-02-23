@@ -225,20 +225,20 @@ class Server(fedavg.Server):
 
     def customize_server_payload(self, payload):
         "Add server control variates into the server payload."
-        return [payload, self.client_momentum_update_direction]
+        return [payload, self.client_momentum_update_direction, self.current_round]
 
-    # def choose_clients(self, clients_pool, clients_count):
-    #     """ Choose a subset of the clients to participate in each round. """
-    #     assert clients_count <= len(clients_pool)
-    #     if self.probabilities is not None:
-    #     # Select clients randomly
-    #         results = np.random.choice(np.arange(1, self.total_clients+1), clients_count, replace=False, \
-    #                                 p=list(self.probabilities.values()) / np.sum(list(self.probabilities.values())))
-    #         return [int(item) for item in results]
-    #     else:
-    #         self.results = random.sample(clients_pool, clients_count)
-    #
-    #         return self.results
+    def choose_clients(self, clients_pool, clients_count):
+        """ Choose a subset of the clients to participate in each round. """
+        assert clients_count <= len(clients_pool)
+        if self.probabilities is not None:
+        # Select clients randomly
+            results = np.random.choice(np.arange(1, self.total_clients+1), clients_count, replace=False, \
+                                    p=list(self.probabilities.values()) / np.sum(list(self.probabilities.values())))
+            return [int(item) for item in results]
+        else:
+            self.results = random.sample(clients_pool, clients_count)
+
+            return self.results
 
     # def calc_adaptive_weighting(self, updates, num_samples):
     #     """ Compute the weights for model aggregation considering both node contribution

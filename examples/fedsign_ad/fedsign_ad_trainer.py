@@ -35,6 +35,8 @@ class Trainer(basic.Trainer):
         self.diff = None
         self.momentum = Config().trainer.momentum
         self.alpha = Config().trainer.alpha
+        self.current_round = 0
+        self.gap = 0
 
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
@@ -159,13 +161,13 @@ class Trainer(basic.Trainer):
                         if cnt == 0:
                             for name, params in self.model.named_parameters():
                                 params.grad.data.add_(params.data - self.global_model[name], alpha=self.alpha)
-                                params.grad.data.add_(self.last_model[name] - params.data, alpha=self.alpha)
+                                params.grad.data.add_(self.last_model[name] - params.data, alpha=self.alpha / self.gap)
                         else:
                             for (name, params), value in zip(self.model.named_parameters(), self.update_direction.values()):
                                 params.grad.data.add_(params.data - self.global_model[name] + \
                                                       value * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha)
                                 params.grad.data.add_(self.last_model[name] - params.data - \
-                                                      value * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha)
+                                                      value * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha / self.gap)
                         cnt += 1
                         optimizer.step()
 

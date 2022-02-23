@@ -30,14 +30,14 @@ def modify_concentration(concentration):
 
 
 if __name__ == '__main__':
-    for sampler in [0.1, 0.5]:
-        modify_concentration(sampler)
-        for seed in range(1, 11):
-            modify_random_seed(seed)
-            os.system('python fedsign_ad.py')
-
     for sampler in ['orthogonal']:
         modify_sampler(sampler)
         for seed in range(1, 11):
             modify_random_seed(seed)
             os.system('python fedsign_ad.py')
+
+    # for sampler in [0.1]:
+    #     modify_concentration(sampler)
+    #     for seed in range(1, 11):
+    #         modify_random_seed(seed)
+    #         os.system('python fedsign_ad.py')

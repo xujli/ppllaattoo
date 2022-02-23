@@ -42,14 +42,16 @@ class Trainer(basic.Trainer):
         get_optimizer = getattr(self, "get_optimizer",
                                 optimizers.get_optimizer)
         self.optimizer = get_optimizer(self.model)
+        self.full_batch_grad = []
+        self.update_direction = None
 
-    def set_momentum_params(self, average_momentum):
-        if not average_momentum is None:
-            for group, momentum in zip(self.optimizer.param_groups, average_momentum):
+    def set_momentum_params(self):
+        if not self.update_direction is None:
+            for group, momentum in zip(self.optimizer.param_groups, self.update_direction):
                 # through the models trained by the opt
                 for idx, p in enumerate(group['params']):
                     param_state = self.optimizer.state[p]
-                    param_state['momentum_buffer'] = torch.tensor(momentum[idx])
+                    param_state['momentum_buffer'] = torch.tensor(momentum[idx].clone().detach())
 
     def get_momentum_params(self):
         self.momentums = []
@@ -132,6 +134,7 @@ class Trainer(basic.Trainer):
                         examples, labels = examples.to(self.device), labels.to(
                             self.device)
                         self.optimizer.zero_grad()
+                        self.set_momentum_params()
 
                         if cut_layer is None:
                             outputs = self.model(examples)
@@ -167,6 +170,24 @@ class Trainer(basic.Trainer):
 
                     if hasattr(self.optimizer, "params_state_update"):
                         self.optimizer.params_state_update()
+
+                for batch_id, (examples,
+                               labels) in enumerate(train_loader):
+                    examples, labels = examples.to(self.device), labels.to(
+                        self.device)
+                    self.optimizer.zero_grad()
+
+                    if cut_layer is None:
+                        outputs = self.model(examples)
+                    else:
+                        outputs = self.model.forward_from(
+                            examples, cut_layer)
+
+                    loss = loss_criterion(outputs, labels) / len(train_loader)
+
+                    loss.backward()
+
+                self.full_batch_grad = [param.grad.data for name, param in self.model.named_parameters()]
 
         except Exception as training_exception:
             logging.info("Training on client #%d failed.", self.client_id)
@@ -325,41 +346,41 @@ class Trainer(basic.Trainer):
 
         return accuracy
 
-    async def server_test(self, testset):
-        """Testing the model on the server using the provided test dataset.
-
-        Arguments:
-        testset: The test dataset.
-        """
-        config = Config().trainer._asdict()
-        config['run_id'] = Config().params['run_id']
-
-        self.model.to(self.device)
-        self.model.eval()
-
-        custom_test = getattr(self, "test_model", None)
-
-        if callable(custom_test):
-            return self.test_model(config, testset)
-
-        test_loader = torch.utils.data.DataLoader(
-            testset, batch_size=config['batch_size'], shuffle=False)
-
-        correct = 0
-        total = 0
-
-        with torch.no_grad():
-            for examples, labels in test_loader:
-                examples, labels = examples.to(self.device), labels.to(
-                    self.device)
-
-                outputs = self.model(examples)
-
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-
-                # Yield to other tasks in the server
-                await asyncio.sleep(0)
-
-        return correct / total
+    # async def server_test(self, testset):
+    #     """Testing the model on the server using the provided test dataset.
+    # 
+    #     Arguments:
+    #     testset: The test dataset.
+    #     """
+    #     config = Config().trainer._asdict()
+    #     config['run_id'] = Config().params['run_id']
+    # 
+    #     self.model.to(self.device)
+    #     self.model.eval()
+    # 
+    #     custom_test = getattr(self, "test_model", None)
+    # 
+    #     if callable(custom_test):
+    #         return self.test_model(config, testset)
+    # 
+    #     test_loader = torch.utils.data.DataLoader(
+    #         testset, batch_size=config['batch_size'], shuffle=False)
+    # 
+    #     correct = 0
+    #     total = 0
+    # 
+    #     with torch.no_grad():
+    #         for examples, labels in test_loader:
+    #             examples, labels = examples.to(self.device), labels.to(
+    #                 self.device)
+    # 
+    #             outputs = self.model(examples)
+    # 
+    #             _, predicted = torch.max(outputs.data, 1)
+    #             total += labels.size(0)
+    #             correct += (predicted == labels).sum().item()
+    # 
+    #             # Yield to other tasks in the server
+    #             await asyncio.sleep(0)
+    # 
+    #     return correct / total

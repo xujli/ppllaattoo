@@ -10,11 +10,9 @@ https://arxiv.org/pdf/1910.06378.pdf
 """
 
 from plato.servers import fedavg
-from collections import OrderedDict
+from plato.config import Config
 from scipy.stats import wasserstein_distance
-import torch
 import numpy as np
-
 
 
 class Server(fedavg.Server):
@@ -22,29 +20,24 @@ class Server(fedavg.Server):
     def __init__(self, model=None, algorithm=None, trainer=None):
         super().__init__(model, algorithm, trainer)
         self.momentum_update_direction = None
-        self.momentum_direction_received = None
 
         # alpha controls the decreasing rate of the mapping function
         self.alpha = 2
         self.local_correlations = {}
         self.last_global_grads = None
         self.adaptive_weighting = None
+        self.momentum = Config().trainer.momentum
 
     def extract_client_updates(self, updates):
         """ Extract the model weights and update directions from clients updates. """
         weights_received = [payload[0] for (__, payload) in updates]
-        num_samples = [report.num_samples for (report, __) in updates]
 
         self.momentum_direction_received = [
             payload[1] for (__, payload) in updates
         ]
-
         self.total_samples = sum(
             [report.num_samples for (report, __) in updates])
-        update_received = self.algorithm.compute_weight_updates(weights_received)
         # Get adaptive weighting based on both node contribution and date size
-        self.adaptive_weighting = self.calc_adaptive_weighting(update_received, num_samples)
-        print(self.adaptive_weighting)
         return self.algorithm.compute_weight_updates(weights_received)
 
     async def federated_averaging(self, updates):
@@ -57,31 +50,33 @@ class Server(fedavg.Server):
             for name, weights in weights_received[0].items()
         }
 
+        num_samples = [report.num_samples for (report, __) in updates]
         # Extract the total number of samples
         self.total_samples = sum(
             [report.num_samples for (report, __) in updates])
-
         # Use adaptive weighted average
         for i, update in enumerate(weights_received):
             for name, delta in update.items():
-                avg_update[name] += delta * self.adaptive_weighting[i]
+                avg_update[name] += delta * num_samples[i] / self.total_samples
 
+        avg_gradient_direction = []
+        avg_updates = []
+        for update in self.momentum_direction_received[0]:
+            avg_updates.append(self.trainer.zeros(update.shape))
 
-        self.momentum_update_direction = []
+        avg_gradient_direction.append(avg_updates)
 
-        for momentum in self.momentum_direction_received[0]:
-            self.momentum_update_direction.append(
-                [
-                    self.trainer.zeros(weights.shape)
-                    for weights in momentum
-                ]
-            )
-        # correlations = self.get_momentum()
-        # Use adaptive weighted average
         for i, update in enumerate(self.momentum_direction_received):
-            for idx1, momtentum in enumerate(update):
-                for idx2, delta in enumerate(momtentum):
-                    self.momentum_update_direction[idx1][idx2] += delta * self.adaptive_weighting[i]
+            for idx2, delta in enumerate(update):
+                avg_gradient_direction[0][idx2] += delta * num_samples[i] / self.total_samples
+
+        if self.momentum_update_direction is None:
+            self.momentum_update_direction = avg_gradient_direction
+        else:
+            for i, update in enumerate(avg_gradient_direction):
+                for idx2, delta in enumerate(update):
+                    self.momentum_update_direction[0][idx2] = self.momentum * self.momentum_update_direction[0][idx2] + \
+                        avg_gradient_direction[0][idx2]
 
         return avg_update
 
@@ -136,52 +131,28 @@ class Server(fedavg.Server):
 
         return flattened
 
-
-    def get_momentum(self):
-        updates = []
-        correlations = [None] * len(self.momentum_direction_received)
-        for momentum in self.momentum_direction_received:
-            update = []
-            for mom in momentum:
-                for item in mom:
-                    update.extend(item.flatten())
-            updates.append(update)
-
-        global_update = np.mean(updates, axis=0)
-
-        # Compute angles in radian between local and global gradients
-        for i, update in enumerate(updates):
-            local_grads = update
-            inner = np.inner(global_update, local_grads)
-            norms = np.linalg.norm(global_update) * np.linalg.norm(local_grads)
-            correlations[i] = 90 - np.abs(np.arccos(np.clip(inner / norms, -1.0, 1.0)))
-
-        correlations = np.exp(np.array(correlations)) / np.sum(np.exp(np.array(correlations)))
-
-        return correlations
-
-    def avg_att(self, baseline_weights, weights_received):
-        """ Perform attentive aggregation with the attention mechanism. """
-        att_update = {
-            name: self.trainer.zeros(weights.shape)
-            for name, weights in weights_received[0].items()
-        }
-
-        atts = OrderedDict()
-        for name, weight in baseline_weights.items():
-            atts[name] = self.trainer.zeros(len(weights_received))
-            for i, update in enumerate(weights_received):
-                delta = update[name]
-                atts[name][i] = torch.linalg.norm(delta)
-
-        for name in baseline_weights.keys():
-            atts[name] = F.softmax(atts[name], dim=0)
-
-        for name, weight in baseline_weights.items():
-            att_weight = self.trainer.zeros(weight.shape)
-            for i, update in enumerate(weights_received):
-                delta = update[name]
-                att_weight += torch.mul(delta, atts[name][i])
-
-            att_update[name] = torch.mul(att_weight, self.epsilon) + torch.mul(
-                torch.randn(weight.shape), self.dp)
+    # def avg_att(self, baseline_weights, weights_received):
+    #     """ Perform attentive aggregation with the attention mechanism. """
+    #     att_update = {
+    #         name: self.trainer.zeros(weights.shape)
+    #         for name, weights in weights_received[0].items()
+    #     }
+    #
+    #     atts = OrderedDict()
+    #     for name, weight in baseline_weights.items():
+    #         atts[name] = self.trainer.zeros(len(weights_received))
+    #         for i, update in enumerate(weights_received):
+    #             delta = update[name]
+    #             atts[name][i] = torch.linalg.norm(delta)
+    #
+    #     for name in baseline_weights.keys():
+    #         atts[name] = F.softmax(atts[name], dim=0)
+    #
+    #     for name, weight in baseline_weights.items():
+    #         att_weight = self.trainer.zeros(weight.shape)
+    #         for i, update in enumerate(weights_received):
+    #             delta = update[name]
+    #             att_weight += torch.mul(delta, atts[name][i])
+    #
+    #         att_update[name] = torch.mul(att_weight, self.epsilon) + torch.mul(
+    #             torch.randn(weight.shape), self.dp)

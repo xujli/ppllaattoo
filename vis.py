@@ -49,7 +49,7 @@ cmap_list3 = [
     '3765005'
 ]
 
-def EMA(curve, alpha=0.2):
+def EMA(curve, alpha=0.5):
     state = 0
     smoothed_curve = []
     for item in curve:
@@ -65,6 +65,8 @@ def get_acc(dir):
     for file in os.listdir(dir):
         df = pd.read_csv(os.path.join(dir, file))
         acc = df['accuracy'].values
+        if 'orthogonal' not in dir:
+            acc = acc[:50]
         acc1.append(acc)
 
     return np.mean(acc1, axis=0), np.max(acc1, axis=1), np.std(acc1, axis=0)
@@ -73,7 +75,7 @@ def get_acc(dir):
 def vis_acc(dataset, net, sampler, target_acc=0, vis=True):
     label_list = ['FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx', 'FedAvg', 'FedGbo']
     for i, label in enumerate(label_list):
-        acc4, max_acc, std = get_acc(f'results/50_4/{dataset}/{net}/{sampler}/{label}')
+        acc4, max_acc, std = get_acc(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
         acc = EMA(acc4)
         plt.plot(acc, c=cmap_list3[i], linewidth=2, alpha=0.8)
         # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
@@ -125,8 +127,8 @@ def boxplot(dataset, net, sampler, target_acc=0):
     accs = []
     for idx, label in enumerate(label_list):
         acc1 = []
-        for file in os.listdir(f'results/50_4/{dataset}/{net}/{sampler}/{label}'):
-            df = pd.read_csv(os.path.join(f'results/50_4/{dataset}/{net}/{sampler}/{label}', file))
+        for file in os.listdir(f'results/10_4/{dataset}/{net}/{sampler}/{label}'):
+            df = pd.read_csv(os.path.join(f'results/10_4/{dataset}/{net}/{sampler}/{label}', file))
             acc = df['accuracy']
             acc1.append(np.max(acc))
         accs.append(acc1)
@@ -145,13 +147,54 @@ def boxplot(dataset, net, sampler, target_acc=0):
     plt.savefig('vis/boxplot/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
     plt.show()
 
+def tranverse():
+    nets = ['mlp', 'lenet']
+    datasets = ['MNIST', 'FashionMNIST']
+    samplers = ['noniid_0.1', 'noniid_0.5', 'orthogonal']
+    for net in nets:
+        for dataset in datasets:
+            for sampler in samplers:
+                sample(dataset, net, sampler, target=75)
+
+def sample(dataset, net, sampler, target):
+    vis_acc(dataset, net, sampler, target)
+    boxplot(dataset, net, sampler, target)
+
+def get_acc1(dir):
+    acc1 = []
+    times = []
+    for file in os.listdir(dir):
+        df = pd.read_csv(os.path.join(dir, file))
+        acc = df['accuracy'].values
+        time1 = df['training_time'].values
+        if 'orthogonal' not in dir:
+            acc = acc[:50]
+            time1 = time1[:50]
+        acc1.append(acc)
+        times.append(time1)
+
+    return np.mean(acc1, axis=0), np.max(acc1, axis=1), np.std(acc1, axis=0), np.mean(times, axis=0)
+
+def time_acc(dataset, net, sampler, target_acc=0):
+    label_list = ['FedTripOpt', 'MimeLite']
+    for i, label in enumerate(label_list):
+
+        acc4, max_acc, std, time1 = get_acc1(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
+        acc = EMA(acc4)
+        plt.plot(np.cumsum(time1), acc, c=cmap_list3[i], linewidth=2, alpha=0.8)
+        # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
+        print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc), np.sum(acc4 <= target_acc)))
+
+    plt.grid(axis='y', linestyle='--', linewidth=1)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
+    plt.legend(label_list, fontsize=15)
+
+    plt.tight_layout(pad=0.1)
+    # plt.savefig('vis/time_acc/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+    plt.show()
+
+
 # print(acc1.max(), acc2.max())
 if __name__ == '__main__':
-    # samplers = ['noniid_0.5', 'noniid_0.1', 'orthogonal']
-    # datasets = ['MNIST', 'FashionMNIST']
-    # nets = ['mlp', 'lenet']
-    # for sampler in samplers:
-    #     for dataset in datasets:
-    #         for net in nets:
-    vis_acc('FashionMNIST', 'lenet', 'orthogonal', 75)
-    boxplot('FashionMNIST', 'lenet', 'orthogonal', 75)
+    vis_acc('MNIST', 'mlp', 'noniid_0.5', 80)

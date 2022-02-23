@@ -42,6 +42,8 @@ class Client(simple.Client):
 
     def load_payload(self, server_payload):
         " Load model weights and server update direction from server payload onto this client. "
+        self.trainer.gap = server_payload[2] - self.trainer.current_round
+        self.trainer.current_round = server_payload[2]
         self.trainer.last_model = deepcopy(self.algorithm.extract_weights())
         self.trainer.update_direction = server_payload[1]
         self.algorithm.load_weights(server_payload[0])
