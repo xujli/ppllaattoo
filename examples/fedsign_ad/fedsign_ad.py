@@ -17,7 +17,6 @@ import fedsign_ad_server
 
 
 def main():
-    """ A Plato federated learning training session using the SCAFFOLD algorithm. """
     client = fedsign_ad_client.Client()
     server = fedsign_ad_server.Server()
 

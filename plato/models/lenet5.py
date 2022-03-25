@@ -45,7 +45,7 @@ class Model(nn.Module):
                                kernel_size=5,
                                bias=True)
         self.relu3 = nn.ReLU()
-        self.fc4 = nn.Linear(120, 84)
+        self.fc4 = nn.Linear(120 if 'MNIST' in Config().data.datasource else 480, 84)
         self.relu4 = nn.ReLU()
         self.fc5 = nn.Linear(84, num_classes)
 

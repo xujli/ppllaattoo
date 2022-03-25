@@ -111,7 +111,8 @@ from torch import nn
 class TextClassificationModel(nn.Module):
     def __init__(self, vocab_size, embed_dim, num_class):
         super(TextClassificationModel, self).__init__()
-        self.embedding = nn.EmbeddingBag(vocab_size, embed_dim, sparse=True)
+        self.embedding = nn.Embedding(vocab_size, embed_dim, sparse=True)
+        self.rnn = nn.LSTM(input_size=20, hidden_size=32, batch_first=True)
         self.fc = nn.Linear(embed_dim, num_class)
         self.init_weights()
 
@@ -121,15 +122,18 @@ class TextClassificationModel(nn.Module):
         self.fc.weight.data.uniform_(-initrange, initrange)
         self.fc.bias.data.zero_()
 
-    def forward(self, text, offsets):
-        embedded = self.embedding(text, offsets)
-        return self.fc(embedded)
+    def forward(self, text):
+        embedded = self.embedding(text)
+        x, _ = self.rnn(embedded)
+        return self.fc(x[:, -1, :])
 
-if __name__ == '__main__':
-    dataset = DataSource()
-    print(dataset.targets())
+# if __name__ == '__main__':
+    # dataset = DataSource()
+    # print(dataset.targets())
     # tokenizer = get_tokenizer('basic_english')
     # train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
+    # # model = TextClassificationModel(20000, 20, 2)
+    # # model(torch.zeros((32, 20, 20000)).long())
     #
     #
     # def yield_tokens(data_iter):
@@ -165,6 +169,7 @@ if __name__ == '__main__':
     # criterion = torch.nn.CrossEntropyLoss()
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
     # for idx, (label, text, offsets) in enumerate(dataloader):
+    #     print(text.shape, offsets.shape)
     #     optimizer.zero_grad()
     #     predicted_label = model(text, offsets)
     #     loss = criterion(predicted_label, label)

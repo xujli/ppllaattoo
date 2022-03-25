@@ -44,6 +44,8 @@ class Trainer(basic.Trainer):
         self.optimizer = get_optimizer(self.model)
         self.full_batch_grad = []
         self.update_direction = None
+        self.train_dloader = None
+        self.test_dloader = None
 
     def set_momentum_params(self):
         if not self.update_direction is None:
@@ -51,7 +53,7 @@ class Trainer(basic.Trainer):
                 # through the models trained by the opt
                 for idx, p in enumerate(group['params']):
                     param_state = self.optimizer.state[p]
-                    param_state['momentum_buffer'] = torch.tensor(momentum[idx].clone().detach())
+                    param_state['momentum_buffer'] = torch.tensor(momentum[idx].clone().detach()).to(self.device)
 
     def get_momentum_params(self):
         self.momentums = []
@@ -96,15 +98,19 @@ class Trainer(basic.Trainer):
                              self.client_id)
                 _train_loader = getattr(self, "train_loader", None)
 
+
                 if callable(_train_loader):
-                    train_loader = self.train_loader(batch_size, trainset,
+                    self.train_dloader = self.train_loader(batch_size, trainset,
                                                      sampler.get(), cut_layer)
                 else:
-                    train_loader = torch.utils.data.DataLoader(
+
+                    self.train_dloader = torch.utils.data.DataLoader(
                         dataset=trainset,
                         shuffle=False,
+                        num_workers=4,
                         batch_size=batch_size,
-                        sampler=sampler.get())
+                        sampler=sampler.get()
+                    )
 
                 iterations_per_epoch = np.ceil(len(trainset) /
                                                batch_size).astype(int)
@@ -124,13 +130,13 @@ class Trainer(basic.Trainer):
                 # Initializing the learning rate schedule, if necessary
                 if hasattr(config, 'lr_schedule'):
                     lr_schedule = optimizers.get_lr_schedule(
-                        self.optimizer, iterations_per_epoch, train_loader)
+                        self.optimizer, iterations_per_epoch, self.train_dloader)
                 else:
                     lr_schedule = None
 
                 for epoch in range(1, epochs + 1):
                     for batch_id, (examples,
-                                   labels) in enumerate(train_loader):
+                                   labels) in enumerate(self.train_dloader):
                         examples, labels = examples.to(self.device), labels.to(
                             self.device)
                         self.optimizer.zero_grad()
@@ -156,7 +162,7 @@ class Trainer(basic.Trainer):
                                 logging.info(
                                     "[Server #{}] Epoch: [{}/{}][{}/{}]\tLoss: {:.6f}"
                                     .format(os.getpid(), epoch, epochs,
-                                            batch_id, len(train_loader),
+                                            batch_id, len(self.train_dloader),
                                             loss.data.item()))
                             else:
                                 if hasattr(config, 'use_wandb'):
@@ -165,14 +171,14 @@ class Trainer(basic.Trainer):
                                 logging.info(
                                     "[Client #{}] Epoch: [{}/{}][{}/{}]\tLoss: {:.6f}"
                                     .format(self.client_id, epoch, epochs,
-                                            batch_id, len(train_loader),
+                                            batch_id, len(self.train_dloader),
                                             loss.data.item()))
 
                     if hasattr(self.optimizer, "params_state_update"):
                         self.optimizer.params_state_update()
 
                 for batch_id, (examples,
-                               labels) in enumerate(train_loader):
+                               labels) in enumerate(self.train_dloader):
                     examples, labels = examples.to(self.device), labels.to(
                         self.device)
                     self.optimizer.zero_grad()
@@ -183,7 +189,7 @@ class Trainer(basic.Trainer):
                         outputs = self.model.forward_from(
                             examples, cut_layer)
 
-                    loss = loss_criterion(outputs, labels) / len(train_loader)
+                    loss = loss_criterion(outputs, labels) / len(self.train_dloader)
 
                     loss.backward()
 
@@ -278,14 +284,14 @@ class Trainer(basic.Trainer):
             if callable(custom_test):
                 accuracy = self.test_model(config, testset)
             else:
-                test_loader = torch.utils.data.DataLoader(
-                    testset, batch_size=config['batch_size'], shuffle=False)
+                self.test_dloader = torch.utils.data.DataLoader(
+                    testset, batch_size=config['batch_size'], num_workers=4, shuffle=False)
 
                 correct = 0
                 total = 0
 
                 with torch.no_grad():
-                    for examples, labels in test_loader:
+                    for examples, labels in self.test_dloader:
                         examples, labels = examples.to(self.device), labels.to(
                             self.device)
 

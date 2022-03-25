@@ -13,7 +13,7 @@ data:
   datasource: EMNIST
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
   label_distribution: iid
-  partition_size: 2000
+  partition_size: 3000
   random_seed: 2
   sampler: noniid
 results:

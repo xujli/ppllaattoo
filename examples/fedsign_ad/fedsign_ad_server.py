@@ -67,7 +67,6 @@ class Server(fedavg.Server):
         # Extract the total number of samples
         self.total_samples = sum(
             [report.num_samples for (report, __) in updates])
-        num_samples = [report.num_samples for (report, __) in updates]
         # Get adaptive weighting based on both node contribution and date size
         update_received = self.algorithm.compute_weight_updates(weights_received)
 

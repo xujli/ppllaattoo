@@ -6,13 +6,12 @@ clients:
   per_round: 4
   simulation: false
   total_clients: 10
-  type: simple
 data:
   concentration: 0.1
   data_path: ../momentum_adp/data
   datasource: MNIST
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
-  partition_size: 600
+  partition_size: 2000
   random_seed: 10
   sampler: noniid
 results:

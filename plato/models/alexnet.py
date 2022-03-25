@@ -17,8 +17,7 @@ class Model(nn.Module):
     def __init__(self, num_classes: int = 10) -> None:
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(1 if Config().data.datasource == 'MNIST' or \
-                                                Config().data.datasource == 'FashionMNIST' else 3,
+            nn.Conv2d(1 if 'MNIST' in Config().data.datasource else 3,
                       64, kernel_size=7, stride=1, padding=2),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),

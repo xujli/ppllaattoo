@@ -13,7 +13,7 @@ import torch
 import random
 import numpy as np
 from plato.config import Config
-os.environ['config_file'] = 'momentum_MNIST_mlp.yml'
+os.environ['config_file'] = 'momentum_FashionMNIST_lenet5.yml'
 
 import momentum_client
 import momentum_server

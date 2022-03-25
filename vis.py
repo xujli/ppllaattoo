@@ -49,7 +49,7 @@ cmap_list3 = [
     '3765005'
 ]
 
-def EMA(curve, alpha=0.5):
+def EMA(curve, alpha=0.3):
     state = 0
     smoothed_curve = []
     for item in curve:
@@ -72,14 +72,15 @@ def get_acc(dir):
     return np.mean(acc1, axis=0), np.max(acc1, axis=1), np.std(acc1, axis=0)
 
 
-def vis_acc(dataset, net, sampler, target_acc=0, vis=True):
-    label_list = ['FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx', 'FedAvg', 'FedGbo']
+def vs_prox(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
+    label_list = ['FedTrip', 'FedProx', 'FedAvg']
     for i, label in enumerate(label_list):
-        acc4, max_acc, std = get_acc(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
+        acc4, max_acc, std = get_acc(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
         acc = EMA(acc4)
         plt.plot(acc, c=cmap_list3[i], linewidth=2, alpha=0.8)
         # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
-        print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc), np.sum(acc4 <= target_acc)))
+        print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc),
+                                        [np.sum(acc4 <= target_acc) for target_acc in target_accs]))
 
     if vis:
         plt.grid(axis='y', linestyle='--', linewidth=1)
@@ -88,7 +89,27 @@ def vis_acc(dataset, net, sampler, target_acc=0, vis=True):
         plt.legend(label_list, fontsize=15)
 
         plt.tight_layout(pad=0.1)
-        plt.savefig('vis/acc_plot/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+        plt.savefig('vis/acc_plot/{}/prox_{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=800)
+        plt.show()
+
+def vis_acc(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
+    label_list = ['FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx Momentum', 'FedAvg', 'FedGbo']
+    for i, label in enumerate(label_list):
+        acc4, max_acc, std = get_acc(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
+        acc = EMA(acc4)
+        plt.plot(acc, c=cmap_list3[i], linewidth=2, alpha=0.8)
+        # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
+        print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc),
+                                        [np.sum(acc4 <= target_acc) for target_acc in target_accs]))
+
+    if vis:
+        plt.grid(axis='y', linestyle='--', linewidth=1)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.legend(label_list, fontsize=15)
+
+        plt.tight_layout(pad=0.1)
+        plt.savefig('vis/acc_plot/{}/{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=400)
         plt.show()
 
 def get_loss(dir):
@@ -99,12 +120,12 @@ def get_loss(dir):
         loss1.append(loss)
     return np.mean(loss1, axis=0), np.max(loss1, axis=1), np.std(loss1, axis=0)
 
-def vis_loss(dataset, net, sampler, target_acc=0, vis=True):
+def vis_loss(data_setting, dataset, net, sampler, target_acc=0, vis=True):
     label_list = ['FedAvg', 'FedAdp']# ['FedAM', 'Local Momentum', 'Server Momentum', 'FedGbo', 'FedSign_ad']
 
     plt.figure()
     for label in label_list:
-        loss4, max_acc, std = get_loss(f'results/50_4/{dataset}/{net}/{sampler}/{label}')
+        loss4, max_acc, std = get_loss(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
 
         plt.plot(loss4)
         # plt.fill_between(np.arange(0, len(loss4)), loss4-std, loss4+std, alpha=0.5)
@@ -115,20 +136,20 @@ def vis_loss(dataset, net, sampler, target_acc=0, vis=True):
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         plt.legend(label_list, fontsize=15)
-        plt.ylim(60, 90)
+
         plt.tight_layout(par=0.1)
         plt.savefig('vis/loss_plot/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
         plt.show()
     plt.close()
 
-def boxplot(dataset, net, sampler, target_acc=0):
+def boxplot(data_setting, dataset, net, sampler, target_acc=0):
     label_list = ['FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx', 'FedAvg', 'FedGbo']
     plt.figure()
     accs = []
     for idx, label in enumerate(label_list):
         acc1 = []
-        for file in os.listdir(f'results/10_4/{dataset}/{net}/{sampler}/{label}'):
-            df = pd.read_csv(os.path.join(f'results/10_4/{dataset}/{net}/{sampler}/{label}', file))
+        for file in os.listdir(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}'):
+            df = pd.read_csv(os.path.join(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}', file))
             acc = df['accuracy']
             acc1.append(np.max(acc))
         accs.append(acc1)
@@ -144,21 +165,21 @@ def boxplot(dataset, net, sampler, target_acc=0):
     plt.yticks(fontsize=15)
     plt.grid(linestyle='--')
     plt.tight_layout(pad=0.1)
-    plt.savefig('vis/boxplot/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+    plt.savefig('vis/boxplot/{}/{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=400)
     plt.show()
 
-def tranverse():
+def tranverse(data_setting):
     nets = ['mlp', 'lenet']
     datasets = ['MNIST', 'FashionMNIST']
     samplers = ['noniid_0.1', 'noniid_0.5', 'orthogonal']
     for net in nets:
         for dataset in datasets:
             for sampler in samplers:
-                sample(dataset, net, sampler, target=75)
+                sample(data_setting, dataset, net, sampler, target=75)
 
-def sample(dataset, net, sampler, target):
-    vis_acc(dataset, net, sampler, target)
-    boxplot(dataset, net, sampler, target)
+def sample(data_setting, dataset, net, sampler, target):
+    vis_acc(data_setting, dataset, net, sampler, target)
+    boxplot(data_setting, dataset, net, sampler, target)
 
 def get_acc1(dir):
     acc1 = []
@@ -166,7 +187,7 @@ def get_acc1(dir):
     for file in os.listdir(dir):
         df = pd.read_csv(os.path.join(dir, file))
         acc = df['accuracy'].values
-        time1 = df['training_time'].values
+        time1 = df['round_time'].values
         if 'orthogonal' not in dir:
             acc = acc[:50]
             time1 = time1[:50]
@@ -175,26 +196,31 @@ def get_acc1(dir):
 
     return np.mean(acc1, axis=0), np.max(acc1, axis=1), np.std(acc1, axis=0), np.mean(times, axis=0)
 
-def time_acc(dataset, net, sampler, target_acc=0):
+def time_acc(data_setting, dataset, net, sampler=0, target_acc=0):
     label_list = ['FedTripOpt', 'MimeLite']
+    marker = ['-', '--', ':']
     for i, label in enumerate(label_list):
-
-        acc4, max_acc, std, time1 = get_acc1(f'results/10_4/{dataset}/{net}/{sampler}/{label}')
-        acc = EMA(acc4)
-        plt.plot(np.cumsum(time1), acc, c=cmap_list3[i], linewidth=2, alpha=0.8)
-        # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
-        print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc), np.sum(acc4 <= target_acc)))
+        for j, sampler in enumerate(['noniid_0.1', 'noniid_0.5', 'orthogonal']):
+            acc4, max_acc, std, time1 = get_acc1(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
+            acc = EMA(acc4)
+            plt.plot(np.cumsum(time1), acc, linestyle=marker[j], c=cmap_list3[i], linewidth=2, alpha=0.8, label='{}_{}'.format(label_list[i], sampler))
+            # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
+            print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc), np.sum(acc4 <= target_acc)))
 
     plt.grid(axis='y', linestyle='--', linewidth=1)
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
-    plt.legend(label_list, fontsize=15)
+    plt.legend(fontsize=15)
+    plt.xlabel('Seconds', fontsize=18)
+    plt.ylabel('Test Accuracy', fontsize=18)
 
     plt.tight_layout(pad=0.1)
-    # plt.savefig('vis/time_acc/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+    plt.savefig('vis/time_acc/{}_{}.png'.format(dataset, net), dpi=400)
     plt.show()
-
 
 # print(acc1.max(), acc2.max())
 if __name__ == '__main__':
-    vis_acc('MNIST', 'mlp', 'noniid_0.5', 80)
+    # vis_acc('50_4', 'MNIST', 'lenet', 'noniid_0.1', 80)
+    # tranverse('10_4')
+    vs_prox('10_4', 'MNIST', 'lenet', 'orthogonal', )
+    # time_acc('10_4', 'MNIST', 'mlp', 'noniid_0.1', 80)

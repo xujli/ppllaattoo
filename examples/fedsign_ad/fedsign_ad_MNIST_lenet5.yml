@@ -13,8 +13,8 @@ data:
   institution_class_ids: 0,1;2,3;4,5;6,7;8,9
   label_distribution: iid
   partition_size: 600
-  random_seed: 1
-  sampler: orthogonal
+  random_seed: 5
+  sampler: noniid
 results:
   plot: round&accuracy, round&training_time
   types: accuracy, training_time, round_time, loss
@@ -22,7 +22,7 @@ server:
   address: 127.0.0.1
   port: 8004
 trainer:
-  alpha: 0.5
+  alpha: 0.1
   batch_size: 50
   beta: 0.9
   epochs: 1
@@ -31,6 +31,6 @@ trainer:
   momentum: 0.9
   optimizer: SGD
   parallelized: false
-  rounds: 80
+  rounds: 50
   target_accuracy: 0.98
   weight_decay: 0.0

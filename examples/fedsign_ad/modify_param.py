@@ -15,9 +15,9 @@ def modify_sampler(sampler):
         content = yaml.load(fp, Loader=yaml.FullLoader)
         content['data']['sampler'] = sampler
         if sampler == 'orthogonal':
-            content['trainer']['rounds'] = 80
+            content['trainer']['rounds'] = 150
         else:
-            content['trainer']['rounds'] = 50
+            content['trainer']['rounds'] = 150
     with open(yml_name, 'w', encoding='UTF-8') as fp:
         yaml.dump(content, fp)
 
@@ -30,14 +30,15 @@ def modify_concentration(concentration):
 
 
 if __name__ == '__main__':
-    for sampler in ['orthogonal']:
+    for concentration in [0.5]:
+        modify_concentration(concentration)
+        for seed in range(1, 11):
+            modify_random_seed(seed)
+            os.system('python fedsign_ad.py')
+
+    for sampler in ['iid']:
         modify_sampler(sampler)
         for seed in range(1, 11):
             modify_random_seed(seed)
             os.system('python fedsign_ad.py')
 
-    # for sampler in [0.1]:
-    #     modify_concentration(sampler)
-    #     for seed in range(1, 11):
-    #         modify_random_seed(seed)
-    #         os.system('python fedsign_ad.py')

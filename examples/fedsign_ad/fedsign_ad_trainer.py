@@ -70,23 +70,24 @@ class Trainer(basic.Trainer):
                 logging.info("[Client #%d] Loading the dataset.",
                              self.client_id)
                 _train_loader = getattr(self, "train_loader", None)
-
                 if callable(_train_loader):
-                    train_loader = self.train_loader(batch_size, trainset,
+                    train_dloader = _train_loader(batch_size, trainset,
                                                      sampler.get(), cut_layer)
                 else:
                     if config['datasource'] == 'IMDB':
-                        train_loader = torch.utils.data.DataLoader(
+                        train_dloader = torch.utils.data.DataLoader(
                             dataset=trainset,
                             shuffle=False,
+                            num_workers=4,
                             batch_size=batch_size,
                             sampler=sampler.get(),
                             collate_fn=self.collate_batch,
                         )
                     else:
-                        train_loader = torch.utils.data.DataLoader(
+                        train_dloader = torch.utils.data.DataLoader(
                             dataset=trainset,
                             shuffle=False,
+                            num_workers=4,
                             batch_size=batch_size,
                             sampler=sampler.get()
                         )
@@ -114,7 +115,7 @@ class Trainer(basic.Trainer):
                 # Initializing the learning rate schedule, if necessary
                 if hasattr(config, 'lr_schedule'):
                     lr_schedule = optimizers.get_lr_schedule(
-                        optimizer, iterations_per_epoch, train_loader)
+                        optimizer, iterations_per_epoch, train_dloader)
                 else:
                     lr_schedule = None
                 all_labels = []
@@ -128,7 +129,7 @@ class Trainer(basic.Trainer):
                 self.global_model = deepcopy(self.model.state_dict())
                 cnt = 0
                 for epoch in range(1, epochs + 1):
-                    for batch_id, item in enumerate(train_loader):
+                    for batch_id, item in enumerate(train_dloader):
                         if config['datasource'] == 'IMDB':
                             examples, labels, offsets = item
                             examples, labels, offsets = examples.to(self.device), labels.to(
@@ -161,13 +162,13 @@ class Trainer(basic.Trainer):
                         if cnt == 0:
                             for name, params in self.model.named_parameters():
                                 params.grad.data.add_(params.data - self.global_model[name], alpha=self.alpha)
-                                params.grad.data.add_(self.last_model[name] - params.data, alpha=self.alpha / self.gap)
+                                params.grad.data.add_(self.last_model[name].to(self.device) - params.data, alpha=self.alpha / self.gap)
                         else:
                             for (name, params), value in zip(self.model.named_parameters(), self.update_direction.values()):
-                                params.grad.data.add_(params.data - self.global_model[name] + \
-                                                      value * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha)
-                                params.grad.data.add_(self.last_model[name] - params.data - \
-                                                      value * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha / self.gap)
+                                params.grad.data.add_(params.data - self.global_model[name].to(self.device) + \
+                                                      value.to(self.device) * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha)
+                                params.grad.data.add_(self.last_model[name].to(self.device) - params.data - \
+                                                      value.to(self.device) * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha / self.gap)
                         cnt += 1
                         optimizer.step()
 
@@ -179,7 +180,7 @@ class Trainer(basic.Trainer):
                                 logging.info(
                                     "[Server #{}] Epoch: [{}/{}][{}/{}]\tLoss: {:.6f}"
                                     .format(os.getpid(), epoch, epochs,
-                                            batch_id, len(train_loader),
+                                            batch_id, len(train_dloader),
                                             loss.data.item()))
                             else:
                                 if hasattr(config, 'use_wandb'):
@@ -188,7 +189,7 @@ class Trainer(basic.Trainer):
                                 logging.info(
                                     "[Client #{}] Epoch: [{}/{}][{}/{}]\tLoss: {:.6f}"
                                     .format(self.client_id, epoch, epochs,
-                                            batch_id, len(train_loader),
+                                            batch_id, len(train_dloader),
                                             loss.data.item()))
 
                     if hasattr(optimizer, "params_state_update"):
