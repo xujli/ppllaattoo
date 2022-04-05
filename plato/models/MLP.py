@@ -24,9 +24,9 @@ class Model(nn.Module):
 
         # We pad the image to get an input size of 32x32 as for the
         # original network in the LeCun paper
-        self.fc1 = nn.Linear(784, num_classes)
+        self.fc1 = nn.Linear(784, 100)
         # self.bn = nn.BatchNorm1d(100)
-        # self.fc2 = nn.Linear(100, num_classes)
+        self.fc2 = nn.Linear(100, num_classes)
 
     def flatten(self, x):
         """Flatten the tensor."""
@@ -36,10 +36,11 @@ class Model(nn.Module):
         """Forward pass."""
         x = self.flatten(x)
         x = self.fc1(x)
+        x = F.relu(x)
         # x = self.bn(x)
-        # x = self.fc2(x)
+        x = self.fc2(x)
 
-        return F.log_softmax(x, dim=1)
+        return x
 
 
     @staticmethod

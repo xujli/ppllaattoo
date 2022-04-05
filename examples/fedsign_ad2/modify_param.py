@@ -1,7 +1,7 @@
 import yaml
 import os
 
-yml_name = 'fedsign_ad_MNIST_lenet5.yml'
+yml_name = 'fedtrip_MNIST_mlp.yml'
 
 def modify_random_seed(seed):
     with open(yml_name, encoding='UTF-8') as fp:
@@ -15,9 +15,9 @@ def modify_sampler(sampler):
         content = yaml.load(fp, Loader=yaml.FullLoader)
         content['data']['sampler'] = sampler
         if sampler == 'orthogonal':
-            content['trainer']['rounds'] = 150
+            content['trainer']['rounds'] = 100
         else:
-            content['trainer']['rounds'] = 150
+            content['trainer']['rounds'] = 100
     with open(yml_name, 'w', encoding='UTF-8') as fp:
         yaml.dump(content, fp)
 
@@ -25,20 +25,21 @@ def modify_concentration(concentration):
     with open(yml_name, encoding='UTF-8') as fp:
         content = yaml.load(fp, Loader=yaml.FullLoader)
         content['data']['concentration'] = concentration
+        content['trainer']['rounds'] = 100
     with open(yml_name, 'w', encoding='UTF-8') as fp:
         yaml.dump(content, fp)
 
 
 if __name__ == '__main__':
-    for concentration in [0.5]:
+    for concentration in [0.1, 0.5]:
         modify_concentration(concentration)
         for seed in range(1, 11):
             modify_random_seed(seed)
-            os.system('python fedsign_ad.py')
+            os.system('python fedtrip.py')
 
-    for sampler in ['iid']:
+    for sampler in ['orthogonal']:
         modify_sampler(sampler)
         for seed in range(1, 11):
             modify_random_seed(seed)
-            os.system('python fedsign_ad.py')
+            os.system('python fedtrip.py')
 

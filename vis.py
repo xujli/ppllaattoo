@@ -66,7 +66,7 @@ def get_acc(dir):
         df = pd.read_csv(os.path.join(dir, file))
         acc = df['accuracy'].values
         if 'orthogonal' not in dir:
-            acc = acc[:50]
+            acc = acc[:100]
         acc1.append(acc)
 
     return np.mean(acc1, axis=0), np.max(acc1, axis=1), np.std(acc1, axis=0)
@@ -87,13 +87,15 @@ def vs_prox(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         plt.legend(label_list, fontsize=15)
+        plt.xlabel('# Rounds', fontsize=18)
+        plt.ylabel('Accuracy', fontsize=18)
 
         plt.tight_layout(pad=0.1)
         plt.savefig('vis/acc_plot/{}/prox_{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=800)
         plt.show()
 
 def vis_acc(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
-    label_list = ['FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx Momentum', 'FedAvg', 'FedGbo']
+    label_list = ['FedTrip', 'FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx', 'FedAvg', 'FedGbo', 'MimeLite']
     for i, label in enumerate(label_list):
         acc4, max_acc, std = get_acc(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
         acc = EMA(acc4)
@@ -107,6 +109,8 @@ def vis_acc(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         plt.legend(label_list, fontsize=15)
+        plt.xlabel('# Rounds', fontsize=18)
+        plt.ylabel('Accuracy', fontsize=18)
 
         plt.tight_layout(pad=0.1)
         plt.savefig('vis/acc_plot/{}/{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=400)
@@ -143,7 +147,7 @@ def vis_loss(data_setting, dataset, net, sampler, target_acc=0, vis=True):
     plt.close()
 
 def boxplot(data_setting, dataset, net, sampler, target_acc=0):
-    label_list = ['FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx', 'FedAvg', 'FedGbo']
+    label_list = ['FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx Momentum', 'FedAvg', 'FedGbo']
     plt.figure()
     accs = []
     for idx, label in enumerate(label_list):
@@ -200,7 +204,7 @@ def time_acc(data_setting, dataset, net, sampler=0, target_acc=0):
     label_list = ['FedTripOpt', 'MimeLite']
     marker = ['-', '--', ':']
     for i, label in enumerate(label_list):
-        for j, sampler in enumerate(['noniid_0.1', 'noniid_0.5', 'orthogonal']):
+        for j, sampler in enumerate(['noniid_0.1',  'noniid_0.5', 'orthogonal']):
             acc4, max_acc, std, time1 = get_acc1(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
             acc = EMA(acc4)
             plt.plot(np.cumsum(time1), acc, linestyle=marker[j], c=cmap_list3[i], linewidth=2, alpha=0.8, label='{}_{}'.format(label_list[i], sampler))
@@ -218,9 +222,32 @@ def time_acc(data_setting, dataset, net, sampler=0, target_acc=0):
     plt.savefig('vis/time_acc/{}_{}.png'.format(dataset, net), dpi=400)
     plt.show()
 
+def vis_test(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
+    label_list = ['cpu', 'gpu']
+    for i, label in enumerate(label_list):
+        acc4, max_acc, std = get_acc(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
+        acc = EMA(acc4)
+        plt.plot(acc, c=cmap_list3[i], linewidth=2, alpha=0.8)
+        # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
+        print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc),
+                                        [np.sum(acc4 <= target_acc) for target_acc in target_accs]))
+
+    if vis:
+        plt.grid(axis='y', linestyle='--', linewidth=1)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.legend(label_list, fontsize=15)
+        plt.xlabel('# Rounds', fontsize=18)
+        plt.ylabel('Accuracy', fontsize=18)
+
+        plt.tight_layout(pad=0.1)
+        plt.savefig('vis/acc_plot/{}/{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=400)
+        plt.show()
+
 # print(acc1.max(), acc2.max())
 if __name__ == '__main__':
-    # vis_acc('50_4', 'MNIST', 'lenet', 'noniid_0.1', 80)
+    vis_test('10_4', 'MNIST', 'test', 'test', )
+    # vis_acc('10_4', 'MNIST', 'mlp', 'noniid_0.1', )
     # tranverse('10_4')
-    vs_prox('10_4', 'MNIST', 'lenet', 'orthogonal', )
+    # vs_prox('10_4', 'MNIST', 'lenet', 'noniid_0.5', )
     # time_acc('10_4', 'MNIST', 'mlp', 'noniid_0.1', 80)
