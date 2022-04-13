@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
+from torch.nn.utils.rnn import pad_sequence
 from torchtext.utils import download_from_url
 from torchtext.data.datasets_utils import _RawTextIterableDataset
 from torchtext.data.functional import to_map_style_dataset
@@ -127,52 +128,48 @@ class TextClassificationModel(nn.Module):
         x, _ = self.rnn(embedded)
         return self.fc(x[:, -1, :])
 
-# if __name__ == '__main__':
-    # dataset = DataSource()
-    # print(dataset.targets())
-    # tokenizer = get_tokenizer('basic_english')
-    # train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
-    # # model = TextClassificationModel(20000, 20, 2)
-    # # model(torch.zeros((32, 20, 20000)).long())
-    #
-    #
-    # def yield_tokens(data_iter):
-    #     for _, text in data_iter:
-    #         yield tokenizer(text)
-    #
-    # # train_iter = to_map_style_dataset(train_iter)
-    # vocab = build_vocab_from_iterator(yield_tokens(train_iter), specials=["<unk>"])
-    # vocab.set_default_index(vocab["<unk>"])
-    # text_pipeline = lambda x: vocab(tokenizer(x))
-    # label_pipeline = lambda x: 0 if x == 'neg' else 1
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # def collate_batch(batch):
-    #     label_list, text_list, offsets = [], [], [0]
-    #     for (_label, _text) in batch:
-    #         label_list.append(label_pipeline(_label))
-    #         processed_text = torch.tensor(text_pipeline(_text), dtype=torch.int64)
-    #         text_list.append(processed_text)
-    #         offsets.append(processed_text.size(0))
-    #     label_list = torch.tensor(label_list, dtype=torch.int64)
-    #     offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
-    #     text_list = torch.cat(text_list)
-    #     print(text_list.shape)
-    #     return label_list.to(device), text_list.to(device), offsets.to(device)
-    #
-    # train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
-    # vocab_size = len(vocab)
-    # print(vocab_size)
-    # emsize = 64
-    # model = TextClassificationModel(vocab_size, emsize, 2).to(device)
-    # dataloader = DataLoader(train_iter, batch_size=8, shuffle=False, collate_fn=collate_batch)
-    #
-    # criterion = torch.nn.CrossEntropyLoss()
-    # optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
-    # for idx, (label, text, offsets) in enumerate(dataloader):
-    #     print(text.shape, offsets.shape)
-    #     optimizer.zero_grad()
-    #     predicted_label = model(text, offsets)
-    #     loss = criterion(predicted_label, label)
-    #     loss.backward()
-    #     torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-    #     optimizer.step()
+if __name__ == '__main__':
+    tokenizer = get_tokenizer('basic_english')
+    train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
+    # model = TextClassificationModel(20000, 20, 2)
+    # model(torch.zeros((32, 20, 20000)).long())
+
+
+    def yield_tokens(data_iter):
+        for _, text in data_iter:
+            yield tokenizer(text)
+
+    # train_iter = to_map_style_dataset(train_iter)
+    vocab = build_vocab_from_iterator(yield_tokens(train_iter), specials=["<unk>"])
+    vocab.set_default_index(vocab["<unk>"])
+    text_pipeline = lambda x: vocab(tokenizer(x))
+    label_pipeline = lambda x: 0 if x == 'neg' else 1
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def collate_batch(batch):
+        label_list, text_list = [], []
+        for (_label, _text) in batch:
+            label_list.append(label_pipeline(_label))
+            processed_text = torch.tensor(text_pipeline(_text), dtype=torch.int64)
+            text_list.append(processed_text)
+
+        x_padded = pad_sequence(text_list, batch_first=True, padding_value=0)
+        label_list = torch.tensor(label_list, dtype=torch.int64)
+        return x_padded.to(device), label_list.to(device)
+
+    train_iter = IMDB(root='../../examples/momentum_adp/data/IMDB', split='train')
+    vocab_size = len(vocab)
+    print(vocab_size)
+    emsize = 64
+    model = TextClassificationModel(vocab_size, emsize, 2).to(device)
+    dataloader = DataLoader(train_iter, batch_size=8, shuffle=False, collate_fn=collate_batch)
+
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
+    for idx, (text, label) in enumerate(dataloader):
+        print(text.shape, label.shape)
+        # optimizer.zero_grad()
+        # predicted_label = model(text, offsets)
+        # loss = criterion(predicted_label, label)
+        # loss.backward()
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
+        # optimizer.step()

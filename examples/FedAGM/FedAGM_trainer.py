@@ -6,21 +6,18 @@ import logging
 import multiprocessing as mp
 import os
 import time
+import copy
 
 import numpy as np
 import torch
 import torch.nn as nn
-
-from torch.nn.utils.rnn import pad_sequence
-from torchtext.vocab import build_vocab_from_iterator
-from torchtext.data.utils import get_tokenizer
 from plato.config import Config
 from plato.models import registry as models_registry
-from plato.trainers import base
+from plato.trainers import basic
 from plato.utils import optimizers
 
 
-class Trainer(base.Trainer):
+class Trainer(basic.Trainer):
     """A basic federated learning trainer, used by both the client and the server."""
     def __init__(self, model=None):
         """Initializing the trainer with the provided model.
@@ -42,82 +39,11 @@ class Trainer(base.Trainer):
         else:
             self.model = model
 
-        self.tokenizer = None
+        # Initializing the optimizer, this optimizer will used in the whole training loop
+        get_optimizer = getattr(self, "get_optimizer",
+                                optimizers.get_optimizer)
+        self.optimizer = get_optimizer(self.model)
 
-    def text_pipeline(self, x):
-        return self.vocab(self.tokenizer(x))
-
-    def label_pipeline(self, y):
-        return 0 if y == 'neg' else 1
-
-    def configure_IMDB(self, dataset):
-        if self.tokenizer is None:
-            self.tokenizer = get_tokenizer('basic_english')
-
-            def yield_tokens(data_iter):
-                for _, text in data_iter:
-                    yield self.tokenizer(text)
-
-            self.vocab = build_vocab_from_iterator(yield_tokens(dataset), specials=["<unk>"])
-            self.vocab.set_default_index(self.vocab["<unk>"])
-
-
-    def collate_batch(self, batch):
-        label_list, text_list = [], []
-        for (_label, _text) in batch:
-            label_list.append(self.label_pipeline(_label))
-            processed_text = torch.tensor(self.text_pipeline(_text), dtype=torch.int64)
-            text_list.append(processed_text)
-        x_padded = pad_sequence(text_list, batch_first=True, padding_value=0)
-        label_list = torch.tensor(label_list, dtype=torch.int64)
-        return x_padded.to(self.device), label_list.to(self.device)
-
-    def zeros(self, shape):
-        """Returns a PyTorch zero tensor with the given shape."""
-        # This should only be called from a server
-        assert self.client_id == 0
-        return torch.zeros(shape)
-
-    def save_model(self, filename=None):
-        """Saving the model to a file."""
-        model_name = Config().trainer.model_name
-        model_dir = Config().params['model_dir']
-
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-
-        if filename is not None:
-            model_path = f'{model_dir}{filename}'
-        else:
-            model_path = f'{model_dir}{model_name}.pth'
-
-        torch.save(self.model.state_dict(), model_path)
-
-        if self.client_id == 0:
-            logging.info("[Server #%d] Model saved to %s.", os.getpid(),
-                         model_path)
-        else:
-            logging.info("[Client #%d] Model saved to %s.", self.client_id,
-                         model_path)
-
-    def load_model(self, filename=None):
-        """Loading pre-trained model weights from a file."""
-        model_dir = Config().params['pretrained_model_dir']
-        model_name = Config().trainer.model_name
-
-        if filename is not None:
-            model_path = f'{model_dir}{filename}'
-        else:
-            model_path = f'{model_dir}{model_name}.pth'
-
-        if self.client_id == 0:
-            logging.info("[Server #%d] Loading a model from %s.", os.getpid(),
-                         model_path)
-        else:
-            logging.info("[Client #%d] Loading a model from %s.",
-                         self.client_id, model_path)
-
-        self.model.load_state_dict(torch.load(model_path))
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -159,12 +85,8 @@ class Trainer(base.Trainer):
                         dataset=trainset,
                         shuffle=False,
                         batch_size=batch_size,
-                        sampler=sampler.get(),
-                        collate_fn=self.collate_batch if config['datasource'] == 'IMDB' else None,
-                    )
+                        sampler=sampler.get())
 
-                logging.info("[Client #%d] Loading the dataloader.",
-                             self.client_id)
                 iterations_per_epoch = np.ceil(len(trainset) /
                                                batch_size).astype(int)
                 epochs = config['epochs']
@@ -173,6 +95,10 @@ class Trainer(base.Trainer):
                 self.model.to(self.device)
                 self.model.train()
 
+                fixed_model = copy.deepcopy(self.model)
+                for param_t in fixed_model.parameters():
+                    param_t.requires_grad = False
+
                 # Initializing the loss criterion
                 _loss_criterion = getattr(self, "loss_criterion", None)
                 if callable(_loss_criterion):
@@ -180,37 +106,39 @@ class Trainer(base.Trainer):
                 else:
                     loss_criterion = nn.CrossEntropyLoss()
 
-                # Initializing the optimizer
-                get_optimizer = getattr(self, "get_optimizer",
-                                        optimizers.get_optimizer)
-                optimizer = get_optimizer(self.model)
-
                 # Initializing the learning rate schedule, if necessary
                 if hasattr(config, 'lr_schedule'):
                     lr_schedule = optimizers.get_lr_schedule(
-                        optimizer, iterations_per_epoch, train_loader)
+                        self.optimizer, iterations_per_epoch, train_loader)
                 else:
                     lr_schedule = None
-                all_labels = []
-                for epoch in range(1, epochs + 1):
-                    for batch_id, item in enumerate(train_loader):
-                        examples, labels = item
-                        examples, labels = examples.to(self.device), labels.to(self.device)
 
-                        optimizer.zero_grad()
-                        all_labels.extend(labels.cpu().numpy())
+                for epoch in range(1, epochs + 1):
+                    for batch_id, (examples,
+                                   labels) in enumerate(train_loader):
+                        examples, labels = examples.to(self.device), labels.to(
+                            self.device)
+                        self.optimizer.zero_grad()
 
                         if cut_layer is None:
-                             outputs = self.model(examples)
+                            outputs = self.model(examples)
                         else:
                             outputs = self.model.forward_from(
                                 examples, cut_layer)
 
                         loss = loss_criterion(outputs, labels)
 
+                        # Weight L2 loss
+                        reg_loss = 0
+                        fixed_params = {n: p for n, p in fixed_model.named_parameters()}
+                        for n, p in self.model.named_parameters():
+                            reg_loss += ((p - fixed_params[n].detach()) ** 2).sum()
+
+                        loss = Config().trainer.alpha * loss + 0.5 * Config().trainer.mu * reg_loss
+
                         loss.backward()
 
-                        optimizer.step()
+                        self.optimizer.step()
 
                         if lr_schedule is not None:
                             lr_schedule.step()
@@ -232,11 +160,10 @@ class Trainer(base.Trainer):
                                             batch_id, len(train_loader),
                                             loss.data.item()))
 
-                    if hasattr(optimizer, "params_state_update"):
-                        optimizer.params_state_update()
+                    if hasattr(self.optimizer, "params_state_update"):
+                        self.optimizer.params_state_update()
 
         except Exception as training_exception:
-            logging.info(training_exception)
             logging.info("Training on client #%d failed.", self.client_id)
             raise training_exception
 
@@ -248,6 +175,8 @@ class Trainer(base.Trainer):
 
         if 'use_wandb' in config:
             run.finish()
+
+
 
     def train(self, trainset, sampler, cut_layer=None) -> float:
         """The main training loop in a federated learning workload.
@@ -262,8 +191,6 @@ class Trainer(base.Trainer):
         """
         config = Config().trainer._asdict()
         config['run_id'] = Config().params['run_id']
-        config['datasource'] = Config().data.datasource
-
 
         if hasattr(Config().trainer, 'max_concurrency'):
             self.start_training()
@@ -281,6 +208,7 @@ class Trainer(base.Trainer):
                                     ))
             train_proc.start()
             train_proc.join()
+
 
             model_name = Config().trainer.model_name
             filename = f"{model_name}_{self.client_id}_{Config().params['run_id']}.pth"
@@ -303,7 +231,6 @@ class Trainer(base.Trainer):
             toc = time.perf_counter()
 
         training_time = toc - tic
-
         return training_time
 
     def test_process(self, config, testset):
@@ -316,34 +243,25 @@ class Trainer(base.Trainer):
         """
         self.model.to(self.device)
         self.model.eval()
-        # Initializing the loss criterion
-        _loss_criterion = getattr(self, "loss_criterion", None)
-        if callable(_loss_criterion):
-            loss_criterion = self.loss_criterion(self.model)
-        else:
-            loss_criterion = nn.CrossEntropyLoss()
+
+
         try:
             custom_test = getattr(self, "test_model", None)
-
 
             if callable(custom_test):
                 accuracy = self.test_model(config, testset)
             else:
                 test_loader = torch.utils.data.DataLoader(
-                    dataset=testset,
-                    shuffle=False,
-                    batch_size=config['batch_size'],
-                    collate_fn=self.collate_batch if config['datasource'] == 'IMDB' else None,
-                )
+                    testset, batch_size=config['batch_size'], shuffle=False)
 
                 correct = 0
                 total = 0
 
                 with torch.no_grad():
-                    for item in test_loader:
-                        examples, labels = item
+                    for examples, labels in test_loader:
                         examples, labels = examples.to(self.device), labels.to(
                             self.device)
+
                         outputs = self.model(examples)
 
                         _, predicted = torch.max(outputs.data, 1)
@@ -372,7 +290,6 @@ class Trainer(base.Trainer):
         """
         config = Config().trainer._asdict()
         config['run_id'] = Config().params['run_id']
-        config['datasource'] = Config().data.datasource
 
         if hasattr(Config().trainer, 'max_concurrency'):
             self.start_training()
@@ -401,65 +318,3 @@ class Trainer(base.Trainer):
             accuracy = self.test_process(config, testset)
 
         return accuracy
-
-    async def server_test(self, testset):
-        """Testing the model on the server using the provided test dataset.
-
-        Arguments:
-        testset: The test dataset.
-        """
-        config = Config().trainer._asdict()
-        config['run_id'] = Config().params['run_id']
-        config['datasource'] = Config().data.datasource
-
-        self.model.to(self.device)
-        self.model.eval()
-
-        custom_test = getattr(self, "test_model", None)
-
-        if callable(custom_test):
-            return self.test_model(config, testset)
-
-        if config['datasource'] == 'IMDB':
-            test_loader = torch.utils.data.DataLoader(
-                dataset=testset,
-                shuffle=False,
-                batch_size=config['batch_size'],
-                collate_fn=self.collate_batch,
-            )
-        else:
-            test_loader = torch.utils.data.DataLoader(
-                testset, batch_size=config['batch_size'], shuffle=False)
-        # Initializing the loss criterion
-        _loss_criterion = getattr(self, "loss_criterion", None)
-        if callable(_loss_criterion):
-            loss_criterion = self.loss_criterion(self.model)
-        else:
-            loss_criterion = nn.CrossEntropyLoss()
-
-        correct = 0
-        total = 0
-        total_loss = 0
-
-        with torch.no_grad():
-            for item in test_loader:
-                if config['datasource'] == 'IMDB':
-                    examples, labels, offsets = item
-                    examples, labels, offsets = examples.to(self.device), labels.to(
-                        self.device), offsets.to(self.device)
-                    outputs = self.model(examples, offsets)
-                else:
-                    examples, labels = item
-                    examples, labels = examples.to(self.device), labels.to(
-                        self.device)
-                    outputs = self.model(examples)
-
-                total_loss += loss_criterion(outputs, labels).detach().cpu().numpy()
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-
-                # Yield to other tasks in the server
-                await asyncio.sleep(0)
-
-        return correct / total, total_loss / len(test_loader)

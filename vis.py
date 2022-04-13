@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+
 plt.rcParams['font.sans-serif'] = 'Times New Roman'
 
 cmap_list = [
@@ -113,7 +114,7 @@ def vis_acc(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
         plt.ylabel('Accuracy', fontsize=18)
 
         plt.tight_layout(pad=0.1)
-        plt.savefig('vis/acc_plot/{}/{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=400)
+        plt.savefig('vis/acc_plot/{}/{}_{}_{}.pdf'.format(data_setting, dataset, net, sampler), dpi=400)
         plt.show()
 
 def get_loss(dir):
@@ -142,7 +143,7 @@ def vis_loss(data_setting, dataset, net, sampler, target_acc=0, vis=True):
         plt.legend(label_list, fontsize=15)
 
         plt.tight_layout(par=0.1)
-        plt.savefig('vis/loss_plot/{}_{}_{}.png'.format(dataset, net, sampler), dpi=800)
+        plt.savefig('vis/loss_plot/{}_{}_{}.pdf'.format(dataset, net, sampler))
         plt.show()
     plt.close()
 
@@ -169,7 +170,7 @@ def boxplot(data_setting, dataset, net, sampler, target_acc=0):
     plt.yticks(fontsize=15)
     plt.grid(linestyle='--')
     plt.tight_layout(pad=0.1)
-    plt.savefig('vis/boxplot/{}/{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=400)
+    plt.savefig('vis/boxplot/{}/{}_{}_{}.pdf'.format(data_setting, dataset, net, sampler), dpi=400)
     plt.show()
 
 def tranverse(data_setting):
@@ -219,7 +220,7 @@ def time_acc(data_setting, dataset, net, sampler=0, target_acc=0):
     plt.ylabel('Test Accuracy', fontsize=18)
 
     plt.tight_layout(pad=0.1)
-    plt.savefig('vis/time_acc/{}_{}.png'.format(dataset, net), dpi=400)
+    plt.savefig('vis/time_acc/{}_{}.pdf'.format(dataset, net), dpi=400)
     plt.show()
 
 def vis_test(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
@@ -241,7 +242,7 @@ def vis_test(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
         plt.ylabel('Accuracy', fontsize=18)
 
         plt.tight_layout(pad=0.1)
-        plt.savefig('vis/acc_plot/{}/{}_{}_{}.png'.format(data_setting, dataset, net, sampler), dpi=400)
+        plt.savefig('vis/acc_plot/{}/{}_{}_{}.pdf'.format(data_setting, dataset, net, sampler), dpi=400)
         plt.show()
 
 # print(acc1.max(), acc2.max())

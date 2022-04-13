@@ -9,16 +9,17 @@ in Proceedings of the 37th International Conference on Machine Learning (ICML), 
 https://arxiv.org/pdf/1910.06378.pdf
 """
 import os
+os.environ['config_file'] = 'FedDyn_MNIST_lenet5.yml'
 
-os.environ['config_file'] = 'fedtrip_MNIST_lenet5.yml'
 
-import fedtrip_client
-import fedtrip_server
+import FedDyn_client
+import FedDyn_server
 
 
 def main():
-    client = fedtrip_client.Client()
-    server = fedtrip_server.Server()
+    """ A Plato federated learning training session using the SCAFFOLD algorithm. """
+    client = FedDyn_client.Client()
+    server = FedDyn_server.Server()
 
     server.run(client)
 

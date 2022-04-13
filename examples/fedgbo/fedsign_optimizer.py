@@ -12,7 +12,7 @@ import torch
 from torch import optim
 
 
-class ScaffoldOptimizer(optim.SGD):
+class Optimizer(optim.SGD):
     """A customized optimizer for SCAFFOLD."""
     def __init__(self,
                  params,

@@ -4,20 +4,21 @@ import torch.nn as nn
 from plato.config import Config
 
 class Model(nn.Module):
-    def __init__(self, input_dim=100683, embedding_dim=20, num_classes=2):
+    def __init__(self, input_dim=100683, embedding_dim=4, num_classes=2):
         super().__init__()
 
-        self.embedding = nn.EmbeddingBag(input_dim, embedding_dim, sparse=True)
+        self.embedding = nn.Embedding(input_dim, embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim, 8)
+        self.fc = nn.Linear(8, num_classes)
 
-        self.fc = nn.Linear(embedding_dim, num_classes)
-
-    def forward(self, text, offset):
+    def forward(self, text):
         # text = [sent len, batch size]
-        embedded = self.embedding(text, offset)
+        embedded = self.embedding(text)
+        lstm, _ = self.lstm(embedded)
 
         # embedded = [sent len, batch size, emb dim]
-
-        return self.fc(embedded)
+        fc = self.fc(lstm[:, :-1, :])
+        return fc
 
 
     @staticmethod

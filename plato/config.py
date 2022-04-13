@@ -124,6 +124,8 @@ class Config:
                         describe += '_{}'.format(Config.trainer.server_momentum)
                     if hasattr(Config.trainer, 'alpha'):
                         describe += '_{}'.format(Config.trainer.alpha)
+                    if hasattr(Config.trainer, 'mu'):
+                        describe += '_{}'.format(Config.trainer.mu)
                     if hasattr(Config.data, 'concentration'):
                         describe += '_{}'.format(Config.data.concentration)
                     Config.result_dir = f'./results/{total_clients}_{per_round}/{datasource}/{model}/{server_type}/{iid}/{describe}/'

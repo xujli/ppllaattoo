@@ -5,6 +5,7 @@ import asyncio
 import logging
 import multiprocessing as mp
 import os
+import copy
 import time
 
 import numpy as np
@@ -43,6 +44,7 @@ class Trainer(basic.Trainer):
                                 optimizers.get_optimizer)
         self.optimizer = get_optimizer(self.model)
 
+        self.local_delta = {}
 
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
@@ -95,6 +97,14 @@ class Trainer(basic.Trainer):
                 self.model.to(self.device)
                 self.model.train()
 
+                fixed_model = copy.deepcopy(self.model)
+                for param_t in fixed_model.parameters():
+                    param_t.requires_grad = False
+                fixed_params = {n: p for n, p in fixed_model.named_parameters()}
+
+                if not bool(self.local_delta):
+                    for n, p in fixed_params.items():
+                        self.local_delta[n] = torch.zeros(p.shape)
                 # Initializing the loss criterion
                 _loss_criterion = getattr(self, "loss_criterion", None)
                 if callable(_loss_criterion):
@@ -124,6 +134,20 @@ class Trainer(basic.Trainer):
 
                         loss = loss_criterion(outputs, labels)
 
+                        ## Weight L2 loss
+                        reg_loss = 0
+                        for n, p in self.model.named_parameters():
+                            reg_loss += ((p - fixed_params[n].detach()) ** 2).sum()
+
+                        ## local gradient regularization
+                        lg_loss = 0
+                        for n, p in self.model.named_parameters():
+                            p = torch.flatten(p)
+                            local_d = self.local_delta[n].detach().clone().to(self.device)
+                            local_grad = torch.flatten(local_d)
+                            lg_loss += (p * local_grad.detach()).sum()
+
+                        loss = loss - lg_loss + 0.5 * Config().trainer.mu * reg_loss
                         loss.backward()
 
                         self.optimizer.step()
@@ -151,8 +175,14 @@ class Trainer(basic.Trainer):
                     if hasattr(self.optimizer, "params_state_update"):
                         self.optimizer.params_state_update()
 
+                # Update Local Delta
+                for n, p in self.model.named_parameters():
+                    self.local_delta[n] = (
+                                self.local_delta[n] - Config().trainer.mu / 2 * (p - fixed_params[n]).detach().clone().to('cpu'))
+
         except Exception as training_exception:
             logging.info("Training on client #%d failed.", self.client_id)
+            print(training_exception)
             raise training_exception
 
         if 'max_concurrency' in config:
@@ -163,147 +193,3 @@ class Trainer(basic.Trainer):
 
         if 'use_wandb' in config:
             run.finish()
-
-
-
-    def train(self, trainset, sampler, cut_layer=None) -> float:
-        """The main training loop in a federated learning workload.
-
-        Arguments:
-        trainset: The training dataset.
-        sampler: the sampler that extracts a partition for this client.
-        cut_layer (optional): The layer which training should start from.
-
-        Returns:
-        float: Elapsed time during training.
-        """
-        config = Config().trainer._asdict()
-        config['run_id'] = Config().params['run_id']
-
-        if hasattr(Config().trainer, 'max_concurrency'):
-            self.start_training()
-            tic = time.perf_counter()
-
-            if mp.get_start_method(allow_none=True) != 'spawn':
-                mp.set_start_method('spawn', force=True)
-
-            train_proc = mp.Process(target=self.train_process,
-                                    args=(
-                                        config,
-                                        trainset,
-                                        sampler,
-                                        cut_layer,
-                                    ))
-            train_proc.start()
-            train_proc.join()
-
-
-            model_name = Config().trainer.model_name
-            filename = f"{model_name}_{self.client_id}_{Config().params['run_id']}.pth"
-
-            try:
-                self.load_model(filename)
-            except OSError as error:  # the model file is not found, training failed
-                if hasattr(Config().trainer, 'max_concurrency'):
-                    self.run_sql_statement(
-                        "DELETE FROM trainers WHERE run_id = (?)",
-                        (self.client_id, ))
-                raise ValueError(
-                    f"Training on client {self.client_id} failed.") from error
-
-            toc = time.perf_counter()
-            self.pause_training()
-        else:
-            tic = time.perf_counter()
-            self.train_process(config, trainset, sampler, cut_layer)
-            toc = time.perf_counter()
-
-        self.get_momentum_params()
-        training_time = toc - tic
-        return training_time
-
-    def test_process(self, config, testset):
-        """The testing loop, run in a separate process with a new CUDA context,
-        so that CUDA memory can be released after the training completes.
-
-        Arguments:
-        config: a dictionary of configuration parameters.
-        testset: The test dataset.
-        """
-        self.model.to(self.device)
-        self.model.eval()
-
-
-        try:
-            custom_test = getattr(self, "test_model", None)
-
-            if callable(custom_test):
-                accuracy = self.test_model(config, testset)
-            else:
-                test_loader = torch.utils.data.DataLoader(
-                    testset, batch_size=config['batch_size'], shuffle=False)
-
-                correct = 0
-                total = 0
-
-                with torch.no_grad():
-                    for examples, labels in test_loader:
-                        examples, labels = examples.to(self.device), labels.to(
-                            self.device)
-
-                        outputs = self.model(examples)
-
-                        _, predicted = torch.max(outputs.data, 1)
-                        total += labels.size(0)
-                        correct += (predicted == labels).sum().item()
-
-                accuracy = correct / total
-        except Exception as testing_exception:
-            logging.info("Testing on client #%d failed.", self.client_id)
-            raise testing_exception
-
-        self.model.cpu()
-
-        if 'max_concurrency' in config:
-            model_name = config['model_name']
-            filename = f"{model_name}_{self.client_id}_{config['run_id']}.acc"
-            self.save_accuracy(accuracy, filename)
-        else:
-            return accuracy
-
-    def test(self, testset) -> float:
-        """Testing the model using the provided test dataset.
-
-        Arguments:
-        testset: The test dataset.
-        """
-        config = Config().trainer._asdict()
-        config['run_id'] = Config().params['run_id']
-
-        if hasattr(Config().trainer, 'max_concurrency'):
-            self.start_training()
-
-            if mp.get_start_method(allow_none=True) != 'spawn':
-                mp.set_start_method('spawn', force=True)
-
-            proc = mp.Process(target=self.test_process,
-                              args=(
-                                  config,
-                                  testset,
-                              ))
-            proc.start()
-            proc.join()
-
-            try:
-                model_name = Config().trainer.model_name
-                filename = f"{model_name}_{self.client_id}_{Config().params['run_id']}.acc"
-                accuracy = self.load_accuracy(filename)
-            except OSError as error:  # the model file is not found, training failed
-                raise ValueError(
-                    f"Testing on client #{self.client_id} failed.") from error
-
-            self.pause_training()
-        else:
-            accuracy = self.test_process(config, testset)
-
-        return accuracy
