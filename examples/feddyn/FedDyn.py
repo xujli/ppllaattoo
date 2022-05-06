@@ -9,7 +9,7 @@ in Proceedings of the 37th International Conference on Machine Learning (ICML), 
 https://arxiv.org/pdf/1910.06378.pdf
 """
 import os
-os.environ['config_file'] = 'FedDyn_MNIST_lenet5.yml'
+os.environ['config_file'] = 'FedDyn_EMNIST_lenet5.yml'
 
 
 import FedDyn_client

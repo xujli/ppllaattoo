@@ -35,12 +35,12 @@ class Model(nn.Module):
     def forward(self, x):
         """Forward pass."""
         x = self.flatten(x)
-        x = self.fc1(x)
-        x = F.relu(x)
+        proj = self.fc1(x)
+        x = F.relu(proj)
         # x = self.bn(x)
         x = self.fc2(x)
 
-        return x
+        return x, proj
 
 
     @staticmethod

@@ -110,11 +110,11 @@ class Trainer(basic.Trainer):
                     lr_schedule = None
                 all_labels = []
 
-                if self.update_direction is None:
-                    self.update_direction = {}
-                    for group in optimizer.param_groups:
-                        for p in group['params']:
-                            self.update_direction[p] = torch.zeros(p.shape).to(self.device)
+                # if self.update_direction is None:
+                #     self.update_direction = {}
+                #     for group in optimizer.param_groups:
+                #         for p in group['params']:
+                #             self.update_direction[p] = torch.zeros(p.shape).to(self.device)
 
                 self.global_model = deepcopy(self.model.state_dict())
                 cnt = 0
@@ -125,9 +125,9 @@ class Trainer(basic.Trainer):
                             self.device)
 
                         optimizer.zero_grad()
-                        for group in optimizer.param_groups:
-                            for p, update in zip(group['params'], self.update_direction.values()):
-                                optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+                        # for group in optimizer.param_groups:
+                        #     for p, update in zip(group['params'], self.update_direction.values()):
+                        #         optimizer.state[p]['momentum_buffer'] = update.to(self.device)
 
                         all_labels.extend(labels.cpu().numpy())
 
@@ -141,18 +141,15 @@ class Trainer(basic.Trainer):
 
                         loss.backward()
 
-                        # optimizer.step()
-
                         if cnt == 0:
                             for name, params in self.model.named_parameters():
                                 params.grad.data.add_(params.data - self.global_model[name], alpha=self.alpha)
                                 params.grad.data.add_(self.last_model[name].to(self.device) - params.data, alpha=self.alpha / self.gap)
                         else:
                             for (name, params), value in zip(self.model.named_parameters(), self.update_direction.values()):
-                                params.grad.data.add_(params.data - self.global_model[name].to(self.device) + \
-                                                      value.to(self.device) * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha)
-                                params.grad.data.add_(self.last_model[name].to(self.device) - params.data - \
-                                                      value.to(self.device) * Config().trainer.learning_rate * cnt * Config().trainer.momentum, alpha=self.alpha / self.gap)
+                                print(value)
+                                params.grad.data.add_(params.data - self.global_model[name].to(self.device), alpha=self.alpha)
+                                params.grad.data.add_(self.last_model[name].to(self.device) - params.data, alpha=self.alpha / self.gap)
                         cnt += 1
                         optimizer.step()
 
@@ -178,11 +175,6 @@ class Trainer(basic.Trainer):
 
                     if hasattr(optimizer, "params_state_update"):
                         optimizer.params_state_update()
-
-                self.last_gradient = []
-                for group in optimizer.param_groups:
-                    for p in group['params']:
-                        self.last_gradient.append(p.grad.data)
 
 
         except Exception as training_exception:

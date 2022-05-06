@@ -178,7 +178,7 @@ class Trainer(basic.Trainer):
                 # Update Local Delta
                 for n, p in self.model.named_parameters():
                     self.local_delta[n] = (
-                                self.local_delta[n] - Config().trainer.mu / 2 * (p - fixed_params[n]).detach().clone().to('cpu'))
+                                self.local_delta[n] - Config().trainer.mu * (p - fixed_params[n]).detach().clone().to('cpu'))
 
         except Exception as training_exception:
             logging.info("Training on client #%d failed.", self.client_id)

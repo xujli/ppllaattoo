@@ -34,16 +34,15 @@ def plot(filename):
     shift_list = [-0.3, -0.1, 0.1, 0.3]
     plt.figure()
     for i, (name, item) in enumerate(divergence_dic.items()):
-        plt.bar(np.arange(len(item.values())) - shift_list[i],
-                item.values(), alpha=0.8, width=0.2, color=cmap_list[i], label=name)
+        plt.bar(np.arange(len(item.values())) + shift_list[i],
+                item.values(), alpha=0.8, width=0.2, color=cmap_list[i])
 
     plt.xlabel('Layers', fontsize=18)
     plt.ylabel('Divergence', fontsize=18)
-    plt.xticks(np.arange(len(divergence_dic['IID'].keys())),
-               divergence_dic['IID'].keys(), rotation=-25)
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
-    # plt.legend(fontsize=20)
+    plt.xticks(fontsize=0)
+    plt.yticks(fontsize=18)
+    # plt.legend(['IID', r'Non-IID, $\alpha$=0.1',
+    #             r'Non-IID, $\alpha$=0.5', 'Orthogonal'], fontsize=18)
     plt.tight_layout(pad=0.1)
     plt.savefig('Divergence {}-{}.pdf'.format(filename.split('_')[0].upper(),
                                               filename.split('_')[1].upper()))

@@ -1,0 +1,38 @@
+algorithm:
+  total_silos: 5
+  type: fedavg
+clients:
+  do_test: false
+  per_round: 4
+  simulation: false
+  total_clients: 10
+  type: simple
+data:
+  concentration: 0.5
+  data_path: ../momentum_adp/data
+  datasource: MNIST
+  institution_class_ids: 0,1;2,3;4,5;6,7;8,9
+  label_distribution: iid
+  partition_size: 600
+  random_seed: 10
+  sampler: orthogonal
+results:
+  plot: round&accuracy, round&training_time
+  types: accuracy, training_time, round_time, loss
+server:
+  address: 127.0.0.1
+  port: 8014
+trainer:
+  batch_size: 50
+  epochs: 1
+  learning_rate: 0.01
+  model_name: lenet
+  momentum: 0
+  mu: 5
+  temperature: 0.5
+  optimizer: SGD
+  parallelized: false
+  rounds: 100
+  target_accuracy: 0.98
+  type: basic
+  weight_decay: 0.0

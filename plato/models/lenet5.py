@@ -94,10 +94,11 @@ class Model(nn.Module):
         x = self.relu3(x)
         x = self.flatten(x)
         x = self.fc4(x)
+        proj = x
         x = self.relu4(x)
         x = self.fc5(x)
 
-        return F.log_softmax(x, dim=1)
+        return F.log_softmax(x, dim=1), proj
 
     def forward_to(self, x, cut_layer):
         """Forward pass, but only to the layer specified by cut_layer."""

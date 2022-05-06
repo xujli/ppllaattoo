@@ -8,7 +8,7 @@ class Model(nn.Module):
         super().__init__()
 
         self.embedding = nn.Embedding(input_dim, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, 8)
+        self.lstm = nn.LSTM(embedding_dim, 8, batch_first=True)
         self.fc = nn.Linear(8, num_classes)
 
     def forward(self, text):
@@ -17,7 +17,7 @@ class Model(nn.Module):
         lstm, _ = self.lstm(embedded)
 
         # embedded = [sent len, batch size, emb dim]
-        fc = self.fc(lstm[:, :-1, :])
+        fc = self.fc(lstm[:, -1, :])
         return fc
 
 

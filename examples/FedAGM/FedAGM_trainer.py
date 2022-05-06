@@ -43,6 +43,7 @@ class Trainer(basic.Trainer):
         get_optimizer = getattr(self, "get_optimizer",
                                 optimizers.get_optimizer)
         self.optimizer = get_optimizer(self.model)
+        self.delta = None
 
 
     def train_process(self, config, trainset, sampler, cut_layer=None):

@@ -443,16 +443,10 @@ class Trainer(base.Trainer):
 
         with torch.no_grad():
             for item in test_loader:
-                if config['datasource'] == 'IMDB':
-                    examples, labels, offsets = item
-                    examples, labels, offsets = examples.to(self.device), labels.to(
-                        self.device), offsets.to(self.device)
-                    outputs = self.model(examples, offsets)
-                else:
-                    examples, labels = item
-                    examples, labels = examples.to(self.device), labels.to(
-                        self.device)
-                    outputs = self.model(examples)
+                examples, labels = item
+                examples, labels = examples.to(self.device), labels.to(
+                    self.device)
+                outputs = self.model(examples)
 
                 total_loss += loss_criterion(outputs, labels).detach().cpu().numpy()
                 _, predicted = torch.max(outputs.data, 1)

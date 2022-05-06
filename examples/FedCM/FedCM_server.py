@@ -59,7 +59,7 @@ class Server(fedavg.Server):
         for name, delta in avg_updates.items():
             if 'running_mean' in name or 'running_var' in name or 'num_batches' in name:
                 continue
-            avg_updates[name] = - self.beta * self.momentum_update_direction[name]
+            avg_updates[name] = - self.beta * self.batch_nums * self.momentum_update_direction[name]
 
         return avg_updates
 

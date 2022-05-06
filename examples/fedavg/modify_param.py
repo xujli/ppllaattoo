@@ -29,6 +29,7 @@ def modify_concentration(concentration):
         yaml.dump(content, fp)
 
 if __name__ == '__main__':
+    modify_sampler('noniid')
     for concentration in [0.1, 0.5]:
         modify_concentration(concentration)
         for seed in range(1, 11):

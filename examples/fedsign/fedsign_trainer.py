@@ -18,6 +18,8 @@ from plato.trainers import basic
 
 from plato.utils import optimizers
 
+import matplotlib.pyplot as plt
+
 
 class Trainer(basic.Trainer):
     """The federated learning trainer for the SCAFFOLD client. """
@@ -46,6 +48,7 @@ class Trainer(basic.Trainer):
         sampler: the sampler that extracts a partition for this client.
         cut_layer (optional): The layer which training should start from.
         """
+        classes = []
         if 'use_wandb' in config:
             import wandb
 
@@ -135,6 +138,7 @@ class Trainer(basic.Trainer):
                             examples, labels = examples.to(self.device), labels.to(
                                 self.device)
 
+                        classes.extend(labels.cpu().numpy())
                         optimizer.zero_grad()
                         for group in optimizer.param_groups:
                             for p, update in zip(group['params'], self.server_update_direction.values()):
@@ -176,6 +180,9 @@ class Trainer(basic.Trainer):
 
                     if hasattr(optimizer, "params_state_update"):
                         optimizer.params_state_update()
+
+            np.save('label_{}_{}_{}'.format(self.client_id, Config().data.sampler
+                                            , Config().data.concentration), np.array(classes))
 
         except Exception as training_exception:
             logging.info(training_exception)

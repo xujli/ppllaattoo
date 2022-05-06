@@ -110,11 +110,11 @@ class Trainer(basic.Trainer):
                     lr_schedule = None
                 all_labels = []
                 #
-                # if self.update_direction is None:
-                #     self.update_direction = {}
-                #     for group in optimizer.param_groups:
-                #         for p in group['params']:
-                #             self.update_direction[p] = torch.zeros(p.shape).to(self.device)
+                if self.update_direction is None:
+                    self.update_direction = {}
+                    for group in optimizer.param_groups:
+                        for p in group['params']:
+                            self.update_direction[p] = torch.zeros(p.shape).to(self.device)
 
                 self.global_model = deepcopy(self.model.state_dict())
                 cnt = 0
@@ -125,9 +125,9 @@ class Trainer(basic.Trainer):
                             self.device)
 
                         optimizer.zero_grad()
-                        # for group in optimizer.param_groups:
-                        #     for p, update in zip(group['params'], self.update_direction.values()):
-                        #         optimizer.state[p]['momentum_buffer'] = update.to(self.device)
+                        for group in optimizer.param_groups:
+                            for p, update in zip(group['params'], self.update_direction.values()):
+                                optimizer.state[p]['momentum_buffer'] = update.to(self.device)
 
                         all_labels.extend(labels.cpu().numpy())
 

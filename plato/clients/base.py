@@ -147,6 +147,7 @@ class Client:
 
         if not self.data_loaded:
             self.load_data()
+            self.data_loaded = True
 
     async def chunk_arrived(self, data) -> None:
         """ Upon receiving a chunk of data from the server. """

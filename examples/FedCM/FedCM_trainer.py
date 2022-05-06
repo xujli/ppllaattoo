@@ -18,6 +18,7 @@ from plato.trainers import basic
 
 from plato.utils import optimizers
 
+from FedCM_optimizer import FedCM_Optimizer
 
 class Trainer(basic.Trainer):
     """The federated learning trainer for the SCAFFOLD client. """
@@ -30,6 +31,16 @@ class Trainer(basic.Trainer):
         """
         super().__init__(model)
         self.server_update_direction = []
+
+    def get_optimizer(self, model):
+        """Initialize the FedCM optimizer."""
+        optimizer = FedCM_Optimizer(
+            model.parameters(),
+            lr=Config().trainer.learning_rate,
+            momentum=Config().trainer.momentum,
+            weight_decay=Config().trainer.weight_decay)
+
+        return optimizer
 
     def train_process(self, config, trainset, sampler, cut_layer=None):
         """The main training loop in a federated learning workload, run in
@@ -130,9 +141,6 @@ class Trainer(basic.Trainer):
 
                         optimizer.zero_grad()
 
-                        for group in optimizer.param_groups:
-                            for p, update in zip(group['params'], self.server_update_direction.values()):
-                                optimizer.state[p]['momentum_buffer'] = update.to(self.device)
                         all_labels.extend(labels.cpu().numpy())
 
                         if cut_layer is None:
@@ -146,7 +154,7 @@ class Trainer(basic.Trainer):
 
                         loss.backward()
 
-                        optimizer.step()
+                        optimizer.step(self.server_update_direction, Config().trainer.lamb)
 
                         if lr_schedule is not None:
                             lr_schedule.step()

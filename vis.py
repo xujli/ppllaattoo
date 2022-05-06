@@ -50,7 +50,7 @@ cmap_list3 = [
     '3765005'
 ]
 
-def EMA(curve, alpha=0.3):
+def EMA(curve, alpha=0.2):
     state = 0
     smoothed_curve = []
     for item in curve:
@@ -74,7 +74,7 @@ def get_acc(dir):
 
 
 def vs_prox(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
-    label_list = ['FedTrip', 'FedProx', 'FedAvg']
+    label_list = ['FedTrip', 'FedProx', 'FedAvg', 'MOON']
     for i, label in enumerate(label_list):
         acc4, max_acc, std = get_acc(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
         acc = EMA(acc4)
@@ -96,24 +96,53 @@ def vs_prox(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
         plt.show()
 
 def vis_acc(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
-    label_list = ['FedTrip', 'FedTripOpt', 'Local Momentum', 'Server Momentum', 'FedProx', 'FedAvg', 'FedGbo', 'MimeLite']
+    label_list = ['FedTripM', 'FedAvgM', 'SlowMo', 'FedDyn', 'FedAGM']
+    # label_list = ['FedTripOpt', 'FedCM', 'FedGbo']
+    plt.figure(figsize=(9, 6))
     for i, label in enumerate(label_list):
         acc4, max_acc, std = get_acc(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
         acc = EMA(acc4)
-        plt.plot(acc, c=cmap_list3[i], linewidth=2, alpha=0.8)
+        plt.plot(np.arange(len(acc))+1, acc, c=cmap_list3[i], linewidth=1)
         # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
         print('{:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc),
                                         [np.sum(acc4 <= target_acc) for target_acc in target_accs]))
 
     if vis:
+
         plt.grid(axis='y', linestyle='--', linewidth=1)
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         plt.legend(label_list, fontsize=15)
         plt.xlabel('# Rounds', fontsize=18)
         plt.ylabel('Accuracy', fontsize=18)
-
+        plt.xlim(0, 100)
+        # plt.ylim(70, 100)
         plt.tight_layout(pad=0.1)
+        plt.savefig('vis/acc_plot/{}/{}_{}_{}.pdf'.format(data_setting, dataset, net, sampler), dpi=400)
+        plt.show()
+
+def vis_acc2(data_setting, dataset, net, sampler, target_accs=[0], vis=True, legend=True):
+    label_list = ['FedTrip', 'FedAvg', 'FedProx']
+
+    plt.figure(figsize=(9, 6))
+    for i, label in enumerate(label_list):
+        acc4, max_acc, std = get_acc(f'results/{data_setting}/{dataset}/{net}/{sampler}/{label}')
+        acc = EMA(acc4)
+        plt.plot(np.arange(len(acc))+1, acc, c=cmap_list3[i], linewidth=2)
+        # plt.fill_between(np.arange(0, len(acc4)), acc4-std, acc4+std, alpha=0.5)
+        print('{:.3f} {:.3f} {:.3f} {}'.format(np.mean(max_acc), np.std(max_acc), acc4[49],
+                                        [np.sum(acc4 <= target_acc) for target_acc in target_accs]))
+
+    if vis:
+        plt.grid(axis='y', linestyle='--', linewidth=1)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        if legend:
+            plt.legend(label_list, fontsize=15)
+        plt.xlabel('# Rounds', fontsize=18)
+        plt.ylabel('Accuracy', fontsize=18)
+        plt.xlim(0, 100)
+        # plt.tight_layout(pad=0.1)
         plt.savefig('vis/acc_plot/{}/{}_{}_{}.pdf'.format(data_setting, dataset, net, sampler), dpi=400)
         plt.show()
 
@@ -193,9 +222,6 @@ def get_acc1(dir):
         df = pd.read_csv(os.path.join(dir, file))
         acc = df['accuracy'].values
         time1 = df['round_time'].values
-        if 'orthogonal' not in dir:
-            acc = acc[:50]
-            time1 = time1[:50]
         acc1.append(acc)
         times.append(time1)
 
@@ -247,8 +273,11 @@ def vis_test(data_setting, dataset, net, sampler, target_accs=[0], vis=True):
 
 # print(acc1.max(), acc2.max())
 if __name__ == '__main__':
-    vis_test('10_4', 'MNIST', 'test', 'test', )
-    # vis_acc('10_4', 'MNIST', 'mlp', 'noniid_0.1', )
+    sampler = ['noniid_0.1', 'noniid_0.5', 'orthogonal']
+    # vis_test('10_4', 'MNIST', 'test', 'test', )
+    # vis_acc('10_4', 'MNIST', 'lenet', sampler[2], [88, 93])
+    # print()
+    # vis_acc('10_4', 'FashionMNIST', 'lenet', sampler[1], [88, 93])
     # tranverse('10_4')
-    # vs_prox('10_4', 'MNIST', 'lenet', 'noniid_0.5', )
+    vs_prox('10_4', 'FashionMNIST', 'mlp', sampler[1], )
     # time_acc('10_4', 'MNIST', 'mlp', 'noniid_0.1', 80)

@@ -8,11 +8,13 @@ in Proceedings of the 37th International Conference on Machine Learning (ICML), 
 
 https://arxiv.org/pdf/1910.06378.pdf
 """
-from fedtrip_trainer import Trainer
+
 from plato.clients import simple
+from MOON_trainer import Trainer
 from plato.algorithms import registry as algorithms_registry
 from plato.trainers import registry as trainers_registry
 from copy import deepcopy
+
 
 class Client(simple.Client):
     """A SCAFFOLD federated learning client who sends weight updates
@@ -23,11 +25,12 @@ class Client(simple.Client):
                  algorithm=None,
                  trainer=None):
         super().__init__(model, datasource, algorithm, trainer)
-        self.interval = None
-        self.server_update_direction = []
+
+        self.client_update_direction = None
 
     def get_trainer(self, model=None):
         return Trainer(model)
+
 
     def configure(self) -> None:
         """Prepare this client for training."""
@@ -40,15 +43,9 @@ class Client(simple.Client):
             self.algorithm = algorithms_registry.get(self.trainer)
         self.algorithm.set_client_id(self.client_id)
 
+
     def load_payload(self, server_payload):
         " Load model weights and server update direction from server payload onto this client. "
-        self.trainer.gap = server_payload[1] - self.trainer.current_round
-        self.trainer.current_round = server_payload[1]
-        self.trainer.last_model = deepcopy(self.algorithm.extract_weights())
-        self.algorithm.load_weights(server_payload[0])
-
-
-    async def train(self):
-
-        report, weights = await super().train()
-        return report, [weights, self.client_id]
+        self.trainer.global_model.load_state_dict(server_payload)
+        self.trainer.history_model.load_state_dict(deepcopy(self.algorithm.extract_weights()))
+        self.algorithm.load_weights(server_payload)

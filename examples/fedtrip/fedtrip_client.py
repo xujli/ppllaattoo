@@ -8,7 +8,7 @@ in Proceedings of the 37th International Conference on Machine Learning (ICML), 
 
 https://arxiv.org/pdf/1910.06378.pdf
 """
-from fedsign_ad_trainer import Trainer
+from fedtrip_trainer import Trainer
 from plato.clients import simple
 from plato.algorithms import registry as algorithms_registry
 from plato.trainers import registry as trainers_registry
@@ -40,14 +40,13 @@ class Client(simple.Client):
             self.algorithm = algorithms_registry.get(self.trainer)
         self.algorithm.set_client_id(self.client_id)
 
+
     def load_payload(self, server_payload):
         " Load model weights and server update direction from server payload onto this client. "
-        self.trainer.gap = server_payload[2] - self.trainer.current_round
-        self.trainer.current_round = server_payload[2]
+        self.trainer.gap = server_payload[1] - self.trainer.current_round
+        self.trainer.current_round = server_payload[1]
         self.trainer.last_model = deepcopy(self.algorithm.extract_weights())
-        self.trainer.update_direction = server_payload[1]
         self.algorithm.load_weights(server_payload[0])
-
 
     async def train(self):
 

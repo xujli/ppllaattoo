@@ -53,18 +53,18 @@ class Server(fedavg.Server):
     async def aggregate_weights(self, updates):
         """Aggregate the reported weight updates from the selected clients."""
         update = await self.federated_averaging(updates)
-        self.lr = Config().trainer.learning_rate
+        self.mu = Config().trainer.mu
 
         if self.h is None:
             self.h = {}
             for name, delta in update.items():
-                self.h[name] = - self.lr * delta
+                self.h[name] = - self.mu * delta
         else:
             for name, delta in update.items():
-                self.h[name] = self.h[name] - self.lr * delta
+                self.h[name] = self.h[name] - self.mu * delta
 
         for name, delta in self.h.items():
-            update[name] = - 1 / self.lr * delta
+            update[name] += - 1 / self.mu * delta
         updated_weights = self.algorithm.update_weights(update)
 
         self.algorithm.load_weights(updated_weights)

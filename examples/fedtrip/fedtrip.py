@@ -10,15 +10,15 @@ https://arxiv.org/pdf/1910.06378.pdf
 """
 import os
 
-os.environ['config_file'] = 'fedsign_ad_MNIST_lenet5.yml'
+os.environ['config_file'] = 'fedtrip_MNIST_mlp.yml'
 
-import fedsign_ad_client
-import fedsign_ad_server
+import fedtrip_client
+import fedtrip_server
 
 
 def main():
-    client = fedsign_ad_client.Client()
-    server = fedsign_ad_server.Server()
+    client = fedtrip_client.Client()
+    server = fedtrip_server.Server()
 
     server.run(client)
 
