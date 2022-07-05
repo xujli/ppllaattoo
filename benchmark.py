@@ -1,19 +1,43 @@
-"""The LeNet-5 model for PyTorch.
-
-Reference:
-
-Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner. "Gradient-based learning applied to
-document recognition." Proceedings of the IEEE, November 1998.
-"""
 import collections
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from thop import profile
+from thop import clever_format
 from plato.config import Config
 
 
-class Model(nn.Module):
+class MLP(nn.Module):
+    """The LeNet-5 model.
+
+    Arguments:
+        num_classes (int): The number of classes. Default: 10.
+    """
+    def __init__(self, num_classes=10):
+        super().__init__()
+
+        # We pad the image to get an input size of 32x32 as for the
+        # original network in the LeCun paper
+        self.fc1 = nn.Linear(784, 100)
+        # self.bn = nn.BatchNorm1d(100)
+        self.fc2 = nn.Linear(100, num_classes)
+
+    def flatten(self, x):
+        """Flatten the tensor."""
+        return x.view(x.size(0), -1)
+
+    def forward(self, x):
+        """Forward pass."""
+        x = self.flatten(x)
+        proj = self.fc1(x)
+        x = F.relu(proj)
+        # x = self.bn(x)
+        x = self.fc2(x)
+
+        return x
+
+class CNN(nn.Module):
     """The LeNet-5 model.
 
     Arguments:
@@ -94,33 +118,14 @@ class Model(nn.Module):
         x = self.relu3(x)
         x = self.flatten(x)
         x = self.fc4(x)
-        proj = x
         x = self.relu4(x)
         x = self.fc5(x)
 
         return F.log_softmax(x, dim=1)
 
-    def forward_to(self, x, cut_layer):
-        """Forward pass, but only to the layer specified by cut_layer."""
-        layer_index = self.layers.index(cut_layer)
-
-        for i in range(0, layer_index + 1):
-            x = self.layerdict[self.layers[i]](x)
-
-        return x
-
-    def forward_from(self, x, cut_layer):
-        """Forward pass, starting from the layer specified by cut_layer."""
-        layer_index = self.layers.index(cut_layer)
-
-        for i in range(layer_index + 1, len(self.layers)):
-            x = self.layerdict[self.layers[i]](x)
-
-        return F.log_softmax(x, dim=1)
-
-    @staticmethod
-    def get_model(*args):
-        """Obtaining an instance of this model."""
-        if hasattr(Config().trainer, 'num_classes'):
-            return Model(num_classes=Config().trainer.num_classes)
-        return Model()
+if __name__ == '__main__':
+    inputs = torch.randn(1, 1, 28, 28)
+    model = CNN()
+    total_ops, total_params = profile(model, inputs=(inputs, ))
+    total_ops, total_params = clever_format([total_ops, total_params], '%.3f')
+    print(total_ops, total_params)

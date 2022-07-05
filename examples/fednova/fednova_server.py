@@ -9,8 +9,6 @@ Optimization", in the Proceedings of NeurIPS 2020.
 https://proceedings.neurips.cc/paper/2020/hash/564127c03caab942e503ee6f810f54fd-Abstract.html
 """
 
-from collections import OrderedDict
-
 from plato.servers import fedavg
 
 
@@ -23,10 +21,10 @@ class Server(fedavg.Server):
 
         # Extracting the total number of samples
         self.total_samples = sum(
-            [report.num_samples for (report, __) in updates])
+            [report.num_samples for (report, __, __) in updates])
 
         # Extracting the number of local epoches, tau_i, from the updates
-        local_epochs = [report.epochs for (report, __) in updates]
+        local_epochs = [report.epochs for (report, __, __) in updates]
 
         # Performing weighted averaging
         avg_update = {
@@ -36,13 +34,13 @@ class Server(fedavg.Server):
 
         tau_eff = 0
         for i, update in enumerate(weights_received):
-            report, __ = updates[i]
+            report, __, __ = updates[i]
             num_samples = report.num_samples
             tau_eff_ = local_epochs[i] * num_samples / self.total_samples
             tau_eff += tau_eff_
 
         for i, update in enumerate(weights_received):
-            report, __ = updates[i]
+            report, __, __ = updates[i]
             num_samples = report.num_samples
 
             for name, delta in update.items():

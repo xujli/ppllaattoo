@@ -40,7 +40,7 @@ class Model(nn.Module):
         # x = self.bn(x)
         x = self.fc2(x)
 
-        return x, proj
+        return x
 
 
     @staticmethod

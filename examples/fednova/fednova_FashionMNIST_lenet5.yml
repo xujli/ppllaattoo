@@ -11,8 +11,8 @@ clients:
 data:
   concentration: 0.5
   data_path: ./data
-  datasource: MNIST
-  partition_size: 600
+  datasource: FashionMNIST
+  partition_size: 1000
   random_seed: 10
   sampler: orthogonal
 results:

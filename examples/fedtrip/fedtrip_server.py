@@ -24,27 +24,12 @@ class Server(fedavg.Server):
     """A federated learning server using the SCAFFOLD algorithm."""
     def __init__(self, model=None, algorithm=None, trainer=None):
         super().__init__(model, algorithm, trainer)
-        self.client_gradient = None
-        self.client_gradient_backup = None
-        self.client_momentum_update_direction = None
-        self.server_momentum_update_direction = None
         self.lr = Config().trainer.learning_rate
         self.client_momentum = Config().trainer.momentum
-        self.server_momentum = Config().trainer.beta
         self.batch_nums = Config().data.partition_size // Config().trainer.batch_size
         if Config().data.partition_size % Config().trainer.batch_size != 0:
             self.batch_nums += 1
         self.batch_nums *= Config().trainer.epochs
-        # alpha controls the decreasing rate of the mapping function
-        self.moving_mean = {}
-        self.alpha = 0.3
-        self.local_correlations = {}
-        self.clients_bias = None
-        self.weight_matrix = []
-        self.old_grad = None
-        self.probabilities = None
-        self.diff = {}
-        self.diff_count = {}
 
 
     def get_trainer(self, model=None):

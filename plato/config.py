@@ -118,6 +118,8 @@ class Config:
                     server_type = Config.algorithm.type
                     iid = Config.data.sampler
                     describe = '{}'.format(Config.trainer.learning_rate)
+                    if hasattr(Config.trainer, 'epochs'):
+                        describe += '_{}'.format(Config.trainer.epochs)
                     if Config.trainer.momentum != 0:
                         describe += '_{}'.format(Config.trainer.momentum)
                     if hasattr(Config.trainer, 'server_momentum'):

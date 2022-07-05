@@ -22,6 +22,7 @@ class Server(fedavg.Server):
     def __init__(self, model=None, algorithm=None, trainer=None):
         super().__init__(model, algorithm, trainer)
         self.h = None
+        self.coef = Config().clients.per_round / Config().clients.total_clients
 
     def get_trainer(self, model=None):
         return Trainer(model)
@@ -61,7 +62,7 @@ class Server(fedavg.Server):
                 self.h[name] = - self.mu * delta
         else:
             for name, delta in update.items():
-                self.h[name] = self.h[name] - self.mu * delta
+                self.h[name] = self.h[name] - self.mu * delta * self.coef
 
         for name, delta in self.h.items():
             update[name] += - 1 / self.mu * delta

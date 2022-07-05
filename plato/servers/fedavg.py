@@ -26,7 +26,7 @@ class Server(base.Server):
         if hasattr(Config().trainer, 'use_wandb'):
             import wandb
 
-            wandb.init(project="plato", reinit=True)
+            wandb.init(entity='lxjxlxj', project="plato", reinit=True)
 
         self.model = model
         self.algorithm = algorithm
