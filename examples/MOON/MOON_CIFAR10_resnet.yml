@@ -1,0 +1,36 @@
+algorithm:
+  total_silos: 5
+  type: fedavg
+clients:
+  do_test: false
+  per_round: 4
+  simulation: false
+  total_clients: 10
+data:
+  data_path: ../momentum_adp/data
+  datasource: CIFAR10
+  institution_class_ids: 0,1;2,3;4,5;6,7;8,9
+  label_distribution: iid
+  partition_size: 600
+  random_seed: 0
+  concentration: 0.5
+  sampler: noniid
+results:
+  plot: round&accuracy, round&training_time
+  types: round, accuracy, round_time
+server:
+  address: 127.0.0.1
+  port: 8010
+trainer:
+  batch_size: 10
+  epochs: 1
+  learning_rate: 0.001
+  mu: 5
+  temperature: 0.5
+  max_concurrency: 4
+  model_name: resnet_18
+  momentum: 0.9
+  optimizer: SGD
+  rounds: 100
+  target_accuracy: 0.98
+  weight_decay: 0.0
